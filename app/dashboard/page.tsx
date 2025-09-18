@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Bell, Calendar, ChevronRight } from 'lucide-react';
 import { Course } from '@/types';
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<'all' | 'mandatory' | 'optional'>('all');
+
   const courses: Course[] = [
     {
       id: 1,
@@ -29,7 +31,9 @@ export default function Dashboard() {
       totalLectures: 16,
       completedLectures: 16,
       status: "Retake",
-      statusType: "retake"
+      statusType: "retake",
+      tag: "Optional",
+      tagColor: "bg-green-500"
     },
     {
       id: 3,
@@ -53,9 +57,18 @@ export default function Dashboard() {
       totalLectures: 16,
       completedLectures: 1,
       status: "Start",
-      statusType: "start"
+      statusType: "start",
+      tag: "Optional",
+      tagColor: "bg-green-500"
     }
   ];
+
+  // Filter sesuai tab
+  const filteredCourses = courses.filter((course) => {
+    if (activeTab === 'mandatory') return course.tag === 'Mandatory';
+    if (activeTab === 'optional') return course.tag === 'Optional';
+    return true; // 'all'
+  });
 
   const getProgressBarColor = (progress: number): string => {
     if (progress === 100) return 'bg-green-500';
@@ -119,35 +132,69 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          <div className="mt-6">
+            <p className="text-sm font-medium text-gray-700 mb-2">Filter Courses :</p>
+            <div className="flex space-x-4">
+              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option>All Progress</option>
+                <option>Completed</option>
+                <option>In Progress</option>
+                <option>Overdue</option>
+              </select>
+              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option>Due Dates</option>
+                <option>Newest</option>
+                <option>Oldest</option>
+              </select>
+              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option>Passing Grade</option>
+                <option>Above 70%</option>
+                <option>Below 70%</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Course Tabs */}
         <div className="mb-6">
           <div className="flex space-x-1 border-b">
-            <button className="px-4 py-2 text-blue-600 border-b-2 border-blue-600 font-medium">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 ${
+                activeTab === 'all'
+                  ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
               All Course
             </button>
-            <button className="px-4 py-2 text-gray-600 hover:text-gray-800">
+            <button
+              onClick={() => setActiveTab('mandatory')}
+              className={`px-4 py-2 ${
+                activeTab === 'mandatory'
+                  ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
               Mandatory Course
             </button>
-            <button className="px-4 py-2 text-gray-600 hover:text-gray-800">
+            <button
+              onClick={() => setActiveTab('optional')}
+              className={`px-4 py-2 ${
+                activeTab === 'optional'
+                  ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
               Optional Course
             </button>
           </div>
           
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-600">Recent Courses</div>
-            <div className="flex space-x-4 text-sm text-gray-600">
-              <span>Latest</span>
-              <span>Upcoming</span>
-              <span>Urgent</span>
-            </div>
-          </div>
         </div>
 
         {/* Course Cards */}
         <div className="space-y-4">
-          {courses.map((course) => (
+          {filteredCourses.map((course) => (
             <div key={course.id} className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
@@ -161,37 +208,36 @@ export default function Dashboard() {
                   </div>
                   <p className="text-gray-600 text-sm mb-1">{course.dueDate}</p>
                   <p className="text-gray-600 text-sm">{course.instructor}</p>
-                </div>
-                
-                <div className="text-right">
-                  <div className="text-orange-500 bg-orange-50 px-3 py-1 rounded-full text-sm mb-2">
-                    Due Online Test<br />Don&apos;t be leave this course
                   </div>
+                  
+                  <div className="text-right">
+                    <div className="text-orange-500 bg-orange-50 px-3 py-1 rounded-full text-sm mb-2">
+                    Due Online Test<br />Don&apos;t be leave this course
+                    </div>
                 </div>
               </div>
-              
+
+              {/* Progress Bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Progress - {course.progress}%</span>
                   <span>Training Target - {course.progress}%</span>
                 </div>
                 <div className="w-full h-2 bg-gray-200 rounded-full">
-                  <div 
+                  <div
                     className={`h-2 rounded-full ${getProgressBarColor(course.progress)}`}
                     style={{ width: `${course.progress}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600 mt-2">
-                  <span>{course.completedLectures} of {course.totalLectures} lectures completed</span>
                   <span>
-                    {course.status === "Continue" && "Gap played - Complete and move to net step"}
-                    {course.status === "Retake" && "Test passed - Additional questions"}
+                    {course.completedLectures} of {course.totalLectures} lectures completed
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex space-x-3">
-                <button 
+                <button
                   className={`px-4 py-2 rounded text-sm font-medium ${getButtonClass(course.statusType)}`}
                 >
                   {course.status}

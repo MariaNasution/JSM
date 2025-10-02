@@ -3,86 +3,69 @@
 import React, { useState } from "react";
 import { Bell, FileText, Plus, Edit2 } from "lucide-react";
 
-interface Division {
+interface JobLevel {
   id: number;
   name: string;
-  branch: string;
   status: "Active" | "Inactive";
 }
 
-export default function DivisionPage() {
-  const [divisions, setDivisions] = useState<Division[]>([
-    { id: 1, name: "IT Division", branch: "Jakarta Office", status: "Active" },
-    { id: 2, name: "HR Division", branch: "Jakarta Office", status: "Active" },
-    { id: 3, name: "Finance Division", branch: "Surabaya Office", status: "Inactive" },
+export default function JobLevelPage() {
+  const [levels, setLevels] = useState<JobLevel[]>([
+    { id: 1, name: "Junior", status: "Active" },
+    { id: 2, name: "Senior", status: "Active" },
+    { id: 3, name: "Lead", status: "Inactive" },
+    { id: 4, name: "Manager", status: "Active" },
   ]);
 
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("All Status");
-  const [filterBranch, setFilterBranch] = useState("All Branch");
 
   // Modal state
   const [isModalOpen, setModalOpen] = useState(false);
-  const [editingDivision, setEditingDivision] = useState<Division | null>(null);
+  const [editingLevel, setEditingLevel] = useState<JobLevel | null>(null);
   const [formName, setFormName] = useState("");
-  const [formBranch, setFormBranch] = useState("Jakarta Office");
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
 
-  const branches = ["Jakarta Office", "Surabaya Office", "Bandung Office"];
-
   // Filter logic
-  const filteredDivisions = divisions.filter((division) => {
-    const matchesName = division.name
-      .toLowerCase()
-      .includes(filterName.toLowerCase());
-    const matchesStatus =
-      filterStatus === "All Status" || division.status === filterStatus;
-    const matchesBranch =
-      filterBranch === "All Branch" || division.branch === filterBranch;
-    return matchesName && matchesStatus && matchesBranch;
+  const filteredLevels = levels.filter((l) => {
+    const matchesName = l.name.toLowerCase().includes(filterName.toLowerCase());
+    const matchesStatus = filterStatus === "All Status" || l.status === filterStatus;
+    return matchesName && matchesStatus;
   });
 
-  const getStatusColor = (status: Division["status"]) => {
-    return status === "Active"
-      ? "bg-green-500 text-white"
-      : "bg-red-400 text-white";
-  };
+  const getStatusColor = (status: JobLevel["status"]) =>
+    status === "Active" ? "bg-green-500 text-white" : "bg-red-400 text-white";
 
   const openAddModal = () => {
-    setEditingDivision(null);
+    setEditingLevel(null);
     setFormName("");
-    setFormBranch(branches[0]);
     setFormStatus("Active");
     setModalOpen(true);
   };
 
-  const openEditModal = (division: Division) => {
-    setEditingDivision(division);
-    setFormName(division.name);
-    setFormBranch(division.branch);
-    setFormStatus(division.status);
+  const openEditModal = (level: JobLevel) => {
+    setEditingLevel(level);
+    setFormName(level.name);
+    setFormStatus(level.status);
     setModalOpen(true);
   };
 
   const handleSave = () => {
-    if (editingDivision) {
+    if (editingLevel) {
       // Edit existing
-      setDivisions((prev) =>
-        prev.map((d) =>
-          d.id === editingDivision.id
-            ? { ...d, name: formName, branch: formBranch, status: formStatus }
-            : d
+      setLevels((prev) =>
+        prev.map((l) =>
+          l.id === editingLevel.id ? { ...l, name: formName, status: formStatus } : l
         )
       );
     } else {
       // Add new
-      const newDivision: Division = {
-        id: divisions.length + 1,
+      const newLevel: JobLevel = {
+        id: levels.length + 1,
         name: formName,
-        branch: formBranch,
         status: formStatus,
       };
-      setDivisions((prev) => [...prev, newDivision]);
+      setLevels((prev) => [...prev, newLevel]);
     }
     setModalOpen(false);
   };
@@ -91,7 +74,7 @@ export default function DivisionPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-        <h1 className="text-lg font-medium">Settings / Division</h1>
+        <h1 className="text-lg font-medium">Settings / Job Level</h1>
         <div className="flex items-center gap-3">
           <button className="p-2 hover:bg-blue-700 rounded">
             <Bell size={20} />
@@ -107,7 +90,7 @@ export default function DivisionPage() {
         <div className="bg-white rounded-lg shadow-sm">
           {/* Title and Add Button */}
           <div className="p-6 flex items-center justify-between border-b">
-            <h2 className="text-xl font-bold">Division Management</h2>
+            <h2 className="text-xl font-bold">Job Level Management</h2>
             <button
               onClick={openAddModal}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -140,16 +123,6 @@ export default function DivisionPage() {
               <option>Active</option>
               <option>Inactive</option>
             </select>
-            <select
-              value={filterBranch}
-              onChange={(e) => setFilterBranch(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option>All Branch</option>
-              {branches.map((branch) => (
-                <option key={branch}>{branch}</option>
-              ))}
-            </select>
           </div>
 
           {/* Table */}
@@ -157,27 +130,35 @@ export default function DivisionPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Branch</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredDivisions.map((division) => (
-                  <tr key={division.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-6 font-semibold text-gray-900">{division.name}</td>
-                    <td className="px-6 py-6 text-gray-700">{division.branch}</td>
+                {filteredLevels.map((level) => (
+                  <tr key={level.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-6 font-semibold text-gray-900">
+                      {level.name}
+                    </td>
                     <td className="px-6 py-6">
                       <span
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium ${getStatusColor(division.status)}`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium ${getStatusColor(
+                          level.status
+                        )}`}
                       >
-                        {division.status}
+                        {level.status}
                       </span>
                     </td>
                     <td className="px-6 py-6">
                       <button
-                        onClick={() => openEditModal(division)}
+                        onClick={() => openEditModal(level)}
                         className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         <Edit2 size={18} />
@@ -187,8 +168,10 @@ export default function DivisionPage() {
                 ))}
               </tbody>
             </table>
-            {filteredDivisions.length === 0 && (
-              <div className="text-center py-12 text-gray-500">No divisions found</div>
+            {filteredLevels.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                No job levels found
+              </div>
             )}
           </div>
         </div>
@@ -199,7 +182,7 @@ export default function DivisionPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[400px] rounded-lg shadow-lg p-6">
             <h2 className="text-lg font-semibold mb-4">
-              {editingDivision ? "Edit Division" : "Add Division"}
+              {editingLevel ? "Edit Job Level" : "Add Job Level"}
             </h2>
 
             {/* Name */}
@@ -208,28 +191,16 @@ export default function DivisionPage() {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full border rounded px-3 py-2 mt-1 mb-3"
-              placeholder="Enter division name"
+              placeholder="Enter job level name"
             />
-
-            {/* Branch */}
-            <label className="block text-sm font-medium">Branch(*)</label>
-            <select
-              value={formBranch}
-              onChange={(e) => setFormBranch(e.target.value)}
-              className="w-full border rounded px-3 py-2 mt-1 mb-3"
-            >
-              {branches.map((branch) => (
-                <option key={branch} value={branch}>
-                  {branch}
-                </option>
-              ))}
-            </select>
 
             {/* Status */}
             <label className="block text-sm font-medium">Status(*)</label>
             <select
               value={formStatus}
-              onChange={(e) => setFormStatus(e.target.value as "Active" | "Inactive")}
+              onChange={(e) =>
+                setFormStatus(e.target.value as "Active" | "Inactive")
+              }
               className="w-full border rounded px-3 py-2 mt-1 mb-4"
             >
               <option value="Active">Active</option>

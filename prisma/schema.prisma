@@ -13,6 +13,68 @@ model User {
   email String  @unique
 }
 
+model CompanyBranch {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  status    String     // Active | Inactive
+  divisions Division[]
+  departments Department[]
+  units     Unit[]
+}
+
+model Division {
+  id          Int        @id @default(autoincrement())
+  name        String
+  status      String
+  
+  // Relasi ke Branch
+  branchId    Int
+  branch      CompanyBranch @relation(fields: [branchId], references: [id])
+  
+  departments Department[]
+  units       Unit[]
+  
+  @@unique([name, branchId])
+}
+
+model Department {
+  id          Int        @id @default(autoincrement())
+  name        String
+  status      String
+
+  // Relasi ke Branch
+  branchId    Int
+  branch      CompanyBranch @relation(fields: [branchId], references: [id])
+
+  // Relasi ke Division
+  divisionId  Int
+  division    Division      @relation(fields: [divisionId], references: [id])
+
+  units       Unit[]
+
+  @@unique([name, divisionId])
+}
+
+model Unit {
+  id          Int        @id @default(autoincrement())
+  name        String
+  status      String
+
+  // Relasi ke Branch
+  branchId    Int
+  branch      CompanyBranch @relation(fields: [branchId], references: [id])
+  
+  // Relasi ke Division
+  divisionId  Int
+  division    Division      @relation(fields: [divisionId], references: [id])
+  
+  // Relasi ke Department
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([name, departmentId])
+}
+
 model Employee {
   id                      Int       @id @default(autoincrement())
   name                    String

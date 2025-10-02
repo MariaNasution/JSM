@@ -2,6 +2,10 @@ const express = require("express");
 const next = require("next");
 const cors = require("cors");
 const employeeRoutes = require("./routes/employeeRoutes");
+const branchRoutes = require("./routes/branchRoutes");
+const divisionRoutes = require("./routes/divisionRoutes");
+const departmentRoutes = require("./routes/departmentRoutes");
+const unitRoutes = require("./routes/unitRoutes");
 const { PrismaClient } = require("@prisma/client");
 require("dotenv").config({ path: "../.env" });
 
@@ -14,17 +18,18 @@ const prisma = new PrismaClient();
 app.prepare().then(async () => {
   const server = express();
 
-  // Middleware untuk parsing JSON dan CORS
+  // Middleware
   server.use(express.json());
   server.use(cors());
 
-  // Rute API yang spesifik ditangani oleh Express.js
-  // Middleware ini harus diletakkan sebelum handler Next.js
+  // Rute API yang spesifik ditangani oleh Express.js (HARUS di atas handle Next.js)
   server.use("/api/employees", employeeRoutes);
+  server.use("/api/branches", branchRoutes);
+  server.use("/api/divisions", divisionRoutes);
+  server.use("/api/departments", departmentRoutes);
+  server.use("/api/units", unitRoutes);
 
-  // Bagian ini adalah kuncinya.
-  // Express.js akan Meneruskan SEMUA permintaan yang TIDAK cocok
-  // dengan rute di atas (seperti /api/employees) ke Next.js.
+  // Handler untuk halaman Next.js
   server.use((req, res) => {
     return handle(req, res);
   });

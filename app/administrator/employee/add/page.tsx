@@ -26,6 +26,8 @@ interface EmployeeData {
   joinDate: string;
   signDate: string;
   endEmploymentStatusDate: string;
+  username: string;
+  password: string;
 }
 
 export default function AddEmployee() {
@@ -51,6 +53,8 @@ export default function AddEmployee() {
     joinDate: "",
     signDate: "",
     endEmploymentStatusDate: "",
+    username: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -97,14 +101,12 @@ export default function AddEmployee() {
     <div className="flex h-screen bg-gray-100">
       <div className="flex-1 p-6">
         <div className="bg-white rounded-lg shadow">
+          {/* Header */}
           <div className="bg-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users size={20} />
               <div className="flex items-center gap-2 text-sm">
-                <Link
-                  href="/administrator/employee"
-                  className="hover:underline"
-                >
+                <Link href="/administrator/employee" className="hover:underline">
                   Employee
                 </Link>
                 <span>/</span>
@@ -121,7 +123,9 @@ export default function AddEmployee() {
             </div>
           </div>
 
+          {/* Content */}
           <div className="p-8">
+            {/* Step Indicator */}
             <div className="flex items-center gap-6 mb-6">
               <div
                 className={`flex items-center gap-2 ${
@@ -143,103 +147,158 @@ export default function AddEmployee() {
                 </span>
                 <span>Employment Data</span>
               </div>
+              <div
+                className={`flex items-center gap-2 ${
+                  step === 3 ? "text-blue-600 font-bold" : "text-gray-500"
+                }`}
+              >
+                <span className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-blue-600">
+                  3
+                </span>
+                <span>Account</span>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit}>
+              {/* Step 1 */}
               {step === 1 && (
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">Personal Data</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <input
-                      name="firstName"
-                      value={employeeData.firstName}
-                      onChange={handleChange}
-                      placeholder="First Name"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      name="lastName"
-                      value={employeeData.lastName}
-                      onChange={handleChange}
-                      placeholder="Last Name"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      name="placeOfBirth"
-                      value={employeeData.placeOfBirth}
-                      onChange={handleChange}
-                      placeholder="Place Of Birth"
-                      className="border p-2 rounded"
-                    />
-                    <input
-                      type="date"
-                      name="birthdate"
-                      value={employeeData.birthdate}
-                      onChange={handleChange}
-                      placeholder="Birthdate"
-                      className="border p-2 rounded"
-                    />
-                    <select
-                      name="gender"
-                      value={employeeData.gender}
-                      onChange={handleChange}
-                      className="border p-2 rounded"
-                    >
-                      <option value="">Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
-                    <select
-                      name="religion"
-                      value={employeeData.religion}
-                      onChange={handleChange}
-                      className="border p-2 rounded"
-                    >
-                      <option value="">Religion</option>
-                      <option value="Islam">Islam</option>
-                      <option value="Christian">Christian</option>
-                      <option value="Hindu">Hindu</option>
-                    </select>
-                    <select
-                      name="maritalStatus"
-                      value={employeeData.maritalStatus}
-                      onChange={handleChange}
-                      className="border p-2 rounded"
-                    >
-                      <option value="">Marital Status</option>
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                    </select>
-                    <select
-                      name="bloodType"
-                      value={employeeData.bloodType}
-                      onChange={handleChange}
-                      className="border p-2 rounded"
-                    >
-                      <option value="">Blood Type</option>
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="O">O</option>
-                      <option value="AB">AB</option>
-                    </select>
-                    <input
-                      name="email"
-                      type="email"
-                      value={employeeData.email}
-                      onChange={handleChange}
-                      placeholder="Email"
-                      className="border p-2 rounded col-span-2"
-                    />
-                    <input
-                      name="phoneNumber"
-                      type="tel"
-                      value={employeeData.phoneNumber}
-                      onChange={handleChange}
-                      placeholder="Phone Number"
-                      className="border p-2 rounded col-span-2"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name
+                      </label>
+                      <input
+                        name="firstName"
+                        value={employeeData.firstName}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name
+                      </label>
+                      <input
+                        name="lastName"
+                        value={employeeData.lastName}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Place of Birth
+                      </label>
+                      <input
+                        name="placeOfBirth"
+                        value={employeeData.placeOfBirth}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Birthdate
+                      </label>
+                      <input
+                        type="date"
+                        name="birthdate"
+                        value={employeeData.birthdate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Gender
+                      </label>
+                      <select
+                        name="gender"
+                        value={employeeData.gender}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Religion
+                      </label>
+                      <select
+                        name="religion"
+                        value={employeeData.religion}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Religion</option>
+                        <option value="Islam">Islam</option>
+                        <option value="Christian">Christian</option>
+                        <option value="Hindu">Hindu</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Marital Status
+                      </label>
+                      <select
+                        name="maritalStatus"
+                        value={employeeData.maritalStatus}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Blood Type
+                      </label>
+                      <select
+                        name="bloodType"
+                        value={employeeData.bloodType}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Blood Type</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="O">O</option>
+                        <option value="AB">AB</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        name="email"
+                        type="email"
+                        value={employeeData.email}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                        name="phoneNumber"
+                        type="tel"
+                        value={employeeData.phoneNumber}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-between mt-6">
                     <button
@@ -260,94 +319,203 @@ export default function AddEmployee() {
                 </div>
               )}
 
+              {/* Step 2 */}
               {step === 2 && (
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">
                     Employment Data
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <input
-                      name="companyName"
-                      value={employeeData.companyName}
-                      onChange={handleChange}
-                      placeholder="Company Name"
-                      className="border p-2 rounded col-span-2"
-                    />
-                    <input
-                      name="employeeId"
-                      value={employeeData.employeeId}
-                      onChange={handleChange}
-                      placeholder="Employee ID"
-                      className="border p-2 rounded col-span-2"
-                    />
-                    <input
-                      name="division"
-                      value={employeeData.division}
-                      onChange={handleChange}
-                      placeholder="Division"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      name="department"
-                      value={employeeData.department}
-                      onChange={handleChange}
-                      placeholder="Department"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      name="unit"
-                      value={employeeData.unit}
-                      onChange={handleChange}
-                      placeholder="Unit"
-                      className="border p-2 rounded"
-                    />
-                    <input
-                      name="jobLevel"
-                      value={employeeData.jobLevel}
-                      onChange={handleChange}
-                      placeholder="Job Level"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <select
-                      name="employeeStatus"
-                      value={employeeData.employeeStatus}
-                      onChange={handleChange}
-                      className="border p-2 rounded"
-                      required
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        name="companyName"
+                        value={employeeData.companyName}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Employee ID
+                      </label>
+                      <input
+                        name="employeeId"
+                        value={employeeData.employeeId}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Division
+                      </label>
+                      <select
+                        name="division"
+                        value={employeeData.division}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Division</option>
+                        <option value="Finance">Finance</option>
+                        <option value="HR">HR</option>
+                        <option value="IT">IT</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Department
+                      </label>
+                      <select
+                        name="department"
+                        value={employeeData.department}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Department</option>
+                        <option value="Accounting">Accounting</option>
+                        <option value="Recruitment">Recruitment</option>
+                        <option value="Development">Development</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit
+                      </label>
+                      <select
+                        name="unit"
+                        value={employeeData.unit}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Unit</option>
+                        <option value="Unit A">Unit A</option>
+                        <option value="Unit B">Unit B</option>
+                        <option value="Unit C">Unit C</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Job Level
+                      </label>
+                      <select
+                        name="jobLevel"
+                        value={employeeData.jobLevel}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Job Level</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Director">Director</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Employee Status
+                      </label>
+                      <select
+                        name="employeeStatus"
+                        value={employeeData.employeeStatus}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="On Contract">On Contract</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Join Date
+                      </label>
+                      <input
+                        type="date"
+                        name="joinDate"
+                        value={employeeData.joinDate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sign Date
+                      </label>
+                      <input
+                        type="date"
+                        name="signDate"
+                        value={employeeData.signDate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        End Employment Status Date
+                      </label>
+                      <input
+                        type="date"
+                        name="endEmploymentStatusDate"
+                        value={employeeData.endEmploymentStatusDate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-6">
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      className="bg-green-500 text-white px-4 py-2 rounded"
                     >
-                      <option value="">Employee Status</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="On Contract">On Contract</option>
-                    </select>
-                    <input
-                      type="date"
-                      name="joinDate"
-                      value={employeeData.joinDate}
-                      onChange={handleChange}
-                      placeholder="Join Date"
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      type="date"
-                      name="signDate"
-                      value={employeeData.signDate}
-                      onChange={handleChange}
-                      placeholder="Sign Date"
-                      className="border p-2 rounded"
-                    />
-                    <input
-                      type="date"
-                      name="endEmploymentStatusDate"
-                      value={employeeData.endEmploymentStatusDate}
-                      onChange={handleChange}
-                      placeholder="End Employment Status Date"
-                      className="border p-2 rounded col-span-2"
-                    />
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      className="bg-blue-600 text-white px-4 py-2 rounded"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 */}
+              {step === 3 && (
+                <div className="bg-white shadow rounded-lg p-6">
+                  <h2 className="text-lg font-semibold mb-4">Account</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        name="username"
+                        value={employeeData.username}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={employeeData.password}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-between mt-6">
                     <button
@@ -359,8 +527,8 @@ export default function AddEmployee() {
                     </button>
                     <button
                       type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded"
                       disabled={loading}
+                      className="bg-blue-600 text-white px-4 py-2 rounded"
                     >
                       {loading ? "Saving..." : "Save"}
                     </button>

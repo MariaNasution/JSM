@@ -107,6 +107,7 @@ export default function EmployeeList() {
   return (
     <div className="h-screen bg-gray-100 p-6">
       <div className="bg-white rounded-lg shadow">
+        {/* Header */}
         <div className="bg-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users size={20} />
@@ -122,6 +123,7 @@ export default function EmployeeList() {
           </div>
         </div>
 
+        {/* Content */}
         <div className="p-6">
           <div className="flex justify-end gap-3 mb-6">
             <Link
@@ -143,15 +145,19 @@ export default function EmployeeList() {
             </button>
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full border-collapse">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3">
+                  <th className="w-12 px-2 py-2 text-center align-middle">
                     <input
                       type="checkbox"
                       className="rounded"
-                      checked={selectedEmployees.length === employees.length}
+                      checked={
+                        employees.length > 0 &&
+                        selectedEmployees.length === employees.length
+                      }
                       onChange={handleSelectAll}
                     />
                   </th>
@@ -181,7 +187,7 @@ export default function EmployeeList() {
               <tbody>
                 {employees.map((emp) => (
                   <tr key={emp.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
+                    <td className="w-12 px-2 py-2 text-center align-middle">
                       <input
                         type="checkbox"
                         className="rounded"

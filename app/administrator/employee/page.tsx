@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Bell,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-// 🔹 Definisikan tipe Employee
 interface Employee {
   id: number;
   name: string;
@@ -26,38 +25,30 @@ interface Employee {
 }
 
 export default function EmployeeList() {
-  const [employees] = useState<Employee[]>([
-    {
-      id: 1,
-      name: "John Doe",
-      division: "IT",
-      department: "Development",
-      jobLevel: "Senior",
-      joinDate: "2020-06-15",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      division: "Finance",
-      department: "Finance",
-      jobLevel: "Junior",
-      joinDate: "2020-06-15",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Peter Jones",
-      division: "Marketing",
-      department: "Digital Marketing",
-      jobLevel: "Senior",
-      joinDate: "2020-06-15",
-      status: "Active",
-    },
-  ]);
-
-  // 🔹 selectedEmployees sekarang jelas tipe array number
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:3000/api/employees");
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+      } else {
+        console.error("Failed to fetch employees");
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -75,7 +66,27 @@ export default function EmployeeList() {
     }
   };
 
-  // 🔹 status badge warna
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this employee?")) {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/employees/${id}`,
+          {
+            method: "DELETE",
+          }
+        );
+        if (response.ok) {
+          fetchEmployees(); // Refresh the list
+        } else {
+          alert("Failed to delete employee.");
+        }
+      } catch (error) {
+        console.error("Error deleting employee:", error);
+        alert("Error deleting employee.");
+      }
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Active":
@@ -88,6 +99,10 @@ export default function EmployeeList() {
         return "bg-gray-100 text-gray-700";
     }
   };
+
+  if (isLoading) {
+    return <div className="p-6 text-center">Loading...</div>;
+  }
 
   return (
     <div className="h-screen bg-gray-100 p-6">
@@ -116,7 +131,7 @@ export default function EmployeeList() {
               <Upload size={18} />
               Import
             </Link>
-             <Link href="/administrator/employee/add">
+            <Link href="/administrator/employee/add">
               <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 <Plus size={18} />
                 Add Employee
@@ -178,7 +193,9 @@ export default function EmployeeList() {
                     <td className="px-4 py-3 text-sm">{emp.division}</td>
                     <td className="px-4 py-3 text-sm">{emp.department}</td>
                     <td className="px-4 py-3 text-sm">{emp.jobLevel}</td>
-                    <td className="px-4 py-3 text-sm">{emp.joinDate}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {new Date(emp.joinDate).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -190,13 +207,18 @@ export default function EmployeeList() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
-                          <Edit2 size={16} />
-                        </button>
+                        <Link href={`/administrator/employee/edit/${emp.id}`}>
+                          <button className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
+                            <Edit2 size={16} />
+                          </button>
+                        </Link>
                         <button className="p-1.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">
                           <Eye size={16} />
                         </button>
-                        <button className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200">
+                        <button
+                          className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                          onClick={() => handleDelete(emp.id)}
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>

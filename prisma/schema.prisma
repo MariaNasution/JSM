@@ -12,3 +12,28 @@ model User {
   name  String
   email String  @unique
 }
+
+model Employee {
+  id                      Int      @id @default(autoincrement())
+  name                    String
+  firstName               String?
+  lastName                String?
+  placeOfBirth            String?
+  birthdate               DateTime?
+  gender                  String?
+  religion                String?
+  maritalStatus           String?
+  bloodType               String?
+  email                   String?
+  phoneNumber             String?
+  companyName             String?
+  employeeId              String?
+  division                String
+  department              String
+  unit                    String?
+  jobLevel                String
+  status                  String
+  joinDate                DateTime
+  signDate                DateTime?
+  endEmploymentStatusDate DateTime?
+}

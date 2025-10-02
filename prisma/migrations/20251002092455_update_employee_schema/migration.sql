@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "public"."Employee" ADD COLUMN     "birthdate" TIMESTAMP(3),
+ADD COLUMN     "bloodType" TEXT,
+ADD COLUMN     "companyName" TEXT,
+ADD COLUMN     "email" TEXT,
+ADD COLUMN     "employeeId" TEXT,
+ADD COLUMN     "endEmploymentStatusDate" TIMESTAMP(3),
+ADD COLUMN     "firstName" TEXT,
+ADD COLUMN     "gender" TEXT,
+ADD COLUMN     "lastName" TEXT,
+ADD COLUMN     "maritalStatus" TEXT,
+ADD COLUMN     "phoneNumber" TEXT,
+ADD COLUMN     "placeOfBirth" TEXT,
+ADD COLUMN     "religion" TEXT,
+ADD COLUMN     "signDate" TIMESTAMP(3),
+ADD COLUMN     "unit" TEXT;

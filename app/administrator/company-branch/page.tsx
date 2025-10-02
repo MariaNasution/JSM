@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, FileText, Plus, Edit2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
 
 interface Branch {
   id: number;
@@ -10,12 +10,8 @@ interface Branch {
 }
 
 export default function CompanyBranchPage() {
-  const [branches, setBranches] = useState<Branch[]>([
-    { id: 1, name: "Jakarta Office", status: "Active" },
-    { id: 2, name: "Surabaya Office", status: "Active" },
-    { id: 3, name: "Bandung Office", status: "Inactive" },
-  ]);
-
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("All Status");
 
@@ -24,6 +20,99 @@ export default function CompanyBranchPage() {
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [formName, setFormName] = useState("");
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
+
+  const API_URL = "http://localhost:3000/api/branches";
+
+  // 🔹 Fetch Data (READ)
+  const fetchBranches = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        // Konversi tipe data dari backend (status String) ke frontend (status | Inactive)
+        setBranches(
+          data.map((b: any) => ({
+            ...b,
+            status: b.status as "Active" | "Inactive",
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch branches:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBranches();
+  }, []);
+
+  // 🔹 Save Data (CREATE/UPDATE)
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName || !formStatus) {
+      alert("Nama dan Status wajib diisi.");
+      return;
+    }
+
+    const method = editingBranch ? "PUT" : "POST";
+    const url = editingBranch ? `${API_URL}/${editingBranch.id}` : API_URL;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formName, status: formStatus }),
+      });
+
+      if (response.ok) {
+        alert(`Branch berhasil di${editingBranch ? "update" : "tambah"}!`);
+        fetchBranches(); // Refresh data
+        setModalOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menyimpan branch: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+    }
+  };
+
+  // 🔹 Delete Data (DELETE)
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus Branch ini?"))
+      return;
+
+    try {
+      const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        alert("Branch berhasil dihapus!");
+        fetchBranches();
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menghapus branch: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat menghapus data.");
+    }
+  };
+
+  // Modal handlers
+  const openAddModal = () => {
+    setEditingBranch(null);
+    setFormName("");
+    setFormStatus("Active");
+    setModalOpen(true);
+  };
+
+  const openEditModal = (branch: Branch) => {
+    setEditingBranch(branch);
+    setFormName(branch.name);
+    setFormStatus(branch.status);
+    setModalOpen(true);
+  };
 
   // Filter logic
   const filteredBranches = branches.filter((branch) => {
@@ -41,39 +130,9 @@ export default function CompanyBranchPage() {
       : "bg-red-400 text-white";
   };
 
-  const openAddModal = () => {
-    setEditingBranch(null);
-    setFormName("");
-    setFormStatus("Active");
-    setModalOpen(true);
-  };
-
-  const openEditModal = (branch: Branch) => {
-    setEditingBranch(branch);
-    setFormName(branch.name);
-    setFormStatus(branch.status);
-    setModalOpen(true);
-  };
-
-  const handleSave = () => {
-    if (editingBranch) {
-      // Edit existing branch
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === editingBranch.id ? { ...b, name: formName, status: formStatus } : b
-        )
-      );
-    } else {
-      // Add new branch
-      const newBranch: Branch = {
-        id: branches.length + 1,
-        name: formName,
-        status: formStatus,
-      };
-      setBranches((prev) => [...prev, newBranch]);
-    }
-    setModalOpen(false);
-  };
+  if (isLoading) {
+    return <div className="p-6 text-center text-gray-700">Loading data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -166,12 +225,18 @@ export default function CompanyBranchPage() {
                         {branch.status}
                       </span>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 flex gap-2">
                       <button
                         onClick={() => openEditModal(branch)}
                         className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(branch.id)}
+                        className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </td>
                   </tr>
@@ -191,28 +256,39 @@ export default function CompanyBranchPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-lg shadow-lg p-6">
+          <form
+            onSubmit={handleSave}
+            className="bg-white w-[400px] rounded-lg shadow-lg p-6"
+          >
             <h2 className="text-lg font-semibold mb-4">
               {editingBranch ? "Edit Company Branch" : "Add Company Branch"}
             </h2>
 
             {/* Name */}
-            <label className="block text-sm font-medium">Name(*)</label>
+            <label htmlFor="branchName" className="block text-sm font-medium">
+              Name(*)
+            </label>
             <input
+              id="branchName"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full border rounded px-3 py-2 mt-1 mb-3"
               placeholder="Enter branch name"
+              required
             />
 
             {/* Status */}
-            <label className="block text-sm font-medium">Status(*)</label>
+            <label htmlFor="branchStatus" className="block text-sm font-medium">
+              Status(*)
+            </label>
             <select
+              id="branchStatus"
               value={formStatus}
               onChange={(e) =>
                 setFormStatus(e.target.value as "Active" | "Inactive")
               }
               className="w-full border rounded px-3 py-2 mt-1 mb-4"
+              required
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -221,19 +297,20 @@ export default function CompanyBranchPage() {
             {/* Buttons */}
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
                 Save
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

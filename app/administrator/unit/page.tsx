@@ -1,58 +1,180 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, FileText, Plus, Edit2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+
+interface Branch {
+  id: number;
+  name: string;
+}
+interface Division {
+  id: number;
+  name: string;
+  branchId: number;
+}
+interface Department {
+  id: number;
+  name: string;
+  branchId: number;
+  divisionId: number;
+}
 
 interface Unit {
   id: number;
   name: string;
-  branch: string;
-  division: string;
-  department: string;
+  branchId: number;
+  branch: Branch;
+  divisionId: number;
+  division: Division;
+  departmentId: number;
+  department: Department;
   status: "Active" | "Inactive";
 }
 
 export default function UnitPage() {
-  const [units, setUnits] = useState<Unit[]>([
-    { id: 1, name: "Frontend Team", branch: "Jakarta Office", division: "IT Division", department: "Software Development", status: "Active" },
-    { id: 2, name: "Backend Team", branch: "Jakarta Office", division: "IT Division", department: "Software Development", status: "Active" },
-  ]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("All Status");
-  const [filterBranch, setFilterBranch] = useState("All Branch");
-  const [filterDivision, setFilterDivision] = useState("All Division");
-  const [filterDepartment, setFilterDepartment] = useState("All Department");
+  const [filterBranchId, setFilterBranchId] = useState("All Branch");
+  const [filterDivisionId, setFilterDivisionId] = useState("All Division");
+  const [filterDepartmentId, setFilterDepartmentId] =
+    useState("All Department");
 
   // Modal state
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [formName, setFormName] = useState("");
-  const [formBranch, setFormBranch] = useState("");
-  const [formDivision, setFormDivision] = useState("");
-  const [formDepartment, setFormDepartment] = useState("");
+  const [formBranchId, setFormBranchId] = useState<number | "">("");
+  const [formDivisionId, setFormDivisionId] = useState<number | "">("");
+  const [formDepartmentId, setFormDepartmentId] = useState<number | "">("");
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
 
-  // Filter logic
-  const filteredUnits = units.filter((u) => {
-    const matchesName = u.name.toLowerCase().includes(filterName.toLowerCase());
-    const matchesStatus = filterStatus === "All Status" || u.status === filterStatus;
-    const matchesBranch = filterBranch === "All Branch" || u.branch === filterBranch;
-    const matchesDivision = filterDivision === "All Division" || u.division === filterDivision;
-    const matchesDept = filterDepartment === "All Department" || u.department === filterDepartment;
-    return matchesName && matchesStatus && matchesBranch && matchesDivision && matchesDept;
-  });
+  const API_URL = "http://localhost:3000/api/units";
 
-  const getStatusColor = (status: Unit["status"]) => {
-    return status === "Active" ? "bg-green-500 text-white" : "bg-red-400 text-white";
+  // 🔹 Fetch Data Master
+  const fetchDataMaster = async () => {
+    try {
+      const [branchRes, divRes, deptRes] = await Promise.all([
+        fetch("http://localhost:3000/api/branches"),
+        fetch("http://localhost:3000/api/divisions"),
+        fetch("http://localhost:3000/api/departments"),
+      ]);
+
+      if (branchRes.ok) setBranches(await branchRes.json());
+      if (divRes.ok) setDivisions(await divRes.json());
+      if (deptRes.ok) setDepartments(await deptRes.json());
+    } catch (error) {
+      console.error("Failed to fetch master data:", error);
+    }
   };
 
+  // 🔹 Fetch Units (READ)
+  const fetchUnits = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setUnits(
+          data.map((u: any) => ({
+            ...u,
+            status: u.status as "Active" | "Inactive",
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch units:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDataMaster();
+    fetchUnits();
+  }, []);
+
+  // 🔹 Save Data (CREATE/UPDATE)
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !formName ||
+      !formStatus ||
+      formBranchId === "" ||
+      formDivisionId === "" ||
+      formDepartmentId === ""
+    ) {
+      alert("Semua field wajib diisi.");
+      return;
+    }
+
+    const method = editingUnit ? "PUT" : "POST";
+    const url = editingUnit ? `${API_URL}/${editingUnit.id}` : API_URL;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName,
+          status: formStatus,
+          branchId: formBranchId,
+          divisionId: formDivisionId,
+          departmentId: formDepartmentId,
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Unit berhasil di${editingUnit ? "update" : "tambah"}!`);
+        fetchUnits();
+        setModalOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menyimpan unit: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+    }
+  };
+
+  // 🔹 Delete Data (DELETE)
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus Unit ini?")) return;
+
+    try {
+      const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        alert("Unit berhasil dihapus!");
+        fetchUnits();
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menghapus unit: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat menghapus data.");
+    }
+  };
+
+  // Filtered lists for MODAL
+  const modalDivisions = divisions.filter(
+    (div) => div.branchId === formBranchId
+  );
+  const modalDepartments = departments.filter(
+    (dept) => dept.divisionId === formDivisionId
+  );
+
+  // Modal handlers
   const openAddModal = () => {
     setEditingUnit(null);
     setFormName("");
-    setFormBranch("");
-    setFormDivision("");
-    setFormDepartment("");
+    setFormBranchId(branches.length > 0 ? branches[0].id : "");
+    setFormDivisionId("");
+    setFormDepartmentId("");
     setFormStatus("Active");
     setModalOpen(true);
   };
@@ -60,42 +182,45 @@ export default function UnitPage() {
   const openEditModal = (unit: Unit) => {
     setEditingUnit(unit);
     setFormName(unit.name);
-    setFormBranch(unit.branch);
-    setFormDivision(unit.division);
-    setFormDepartment(unit.department);
+    setFormBranchId(unit.branchId);
+    setFormDivisionId(unit.divisionId);
+    setFormDepartmentId(unit.departmentId);
     setFormStatus(unit.status);
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formName || !formBranch || !formDivision || !formDepartment) {
-      alert("Please fill all required fields (*)");
-      return;
-    }
+  // Filter logic for TABLE
+  const filteredUnits = units.filter((u) => {
+    const matchesName = u.name.toLowerCase().includes(filterName.toLowerCase());
+    const matchesStatus =
+      filterStatus === "All Status" || u.status === filterStatus;
+    const matchesBranch =
+      filterBranchId === "All Branch" ||
+      u.branchId === parseInt(filterBranchId);
+    const matchesDivision =
+      filterDivisionId === "All Division" ||
+      u.divisionId === parseInt(filterDivisionId);
+    const matchesDept =
+      filterDepartmentId === "All Department" ||
+      u.departmentId === parseInt(filterDepartmentId);
+    return (
+      matchesName &&
+      matchesStatus &&
+      matchesBranch &&
+      matchesDivision &&
+      matchesDept
+    );
+  });
 
-    if (editingUnit) {
-      // Edit existing
-      setUnits((prev) =>
-        prev.map((u) =>
-          u.id === editingUnit.id
-            ? { ...u, name: formName, branch: formBranch, division: formDivision, department: formDepartment, status: formStatus }
-            : u
-        )
-      );
-    } else {
-      // Add new
-      const newUnit: Unit = {
-        id: units.length + 1,
-        name: formName,
-        branch: formBranch,
-        division: formDivision,
-        department: formDepartment,
-        status: formStatus,
-      };
-      setUnits((prev) => [...prev, newUnit]);
-    }
-    setModalOpen(false);
+  const getStatusColor = (status: Unit["status"]) => {
+    return status === "Active"
+      ? "bg-green-500 text-white"
+      : "bg-red-400 text-white";
   };
+
+  if (isLoading) {
+    return <div className="p-6 text-center text-gray-700">Loading data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,24 +266,47 @@ export default function UnitPage() {
                 {filterName.length}/50
               </div>
             </div>
-            <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="px-4 py-2 border rounded">
-              <option>All Branch</option>
-              <option>Jakarta Office</option>
-              <option>Surabaya Office</option>
+            <select
+              value={filterBranchId}
+              onChange={(e) => setFilterBranchId(e.target.value)}
+              className="px-4 py-2 border rounded"
+            >
+              <option value="All Branch">All Branch</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
             </select>
-            <select value={filterDivision} onChange={(e) => setFilterDivision(e.target.value)} className="px-4 py-2 border rounded">
-              <option>All Division</option>
-              <option>IT Division</option>
-              <option>HR Division</option>
-              <option>Finance Division</option>
+            <select
+              value={filterDivisionId}
+              onChange={(e) => setFilterDivisionId(e.target.value)}
+              className="px-4 py-2 border rounded"
+            >
+              <option value="All Division">All Division</option>
+              {divisions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
             </select>
-            <select value={filterDepartment} onChange={(e) => setFilterDepartment(e.target.value)} className="px-4 py-2 border rounded">
-              <option>All Department</option>
-              <option>Software Development</option>
-              <option>Recruitment</option>
-              <option>Accounting</option>
+            <select
+              value={filterDepartmentId}
+              onChange={(e) => setFilterDepartmentId(e.target.value)}
+              className="px-4 py-2 border rounded"
+            >
+              <option value="All Department">All Department</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
             </select>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-4 py-2 border rounded">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 border rounded"
+            >
               <option>All Status</option>
               <option>Active</option>
               <option>Inactive</option>
@@ -170,32 +318,56 @@ export default function UnitPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Branch</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Division</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Department</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Branch
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Division
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Department
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredUnits.map((unit) => (
                   <tr key={unit.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-6 font-semibold text-gray-900">{unit.name}</td>
-                    <td className="px-6 py-6">{unit.branch}</td>
-                    <td className="px-6 py-6">{unit.division}</td>
-                    <td className="px-6 py-6">{unit.department}</td>
+                    <td className="px-6 py-6 font-semibold text-gray-900">
+                      {unit.name}
+                    </td>
+                    <td className="px-6 py-6">{unit.branch.name}</td>
+                    <td className="px-6 py-6">{unit.division.name}</td>
+                    <td className="px-6 py-6">{unit.department.name}</td>
                     <td className="px-6 py-6">
-                      <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${getStatusColor(unit.status)}`}>
+                      <span
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium ${getStatusColor(
+                          unit.status
+                        )}`}
+                      >
                         {unit.status}
                       </span>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 flex gap-2">
                       <button
                         onClick={() => openEditModal(unit)}
                         className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(unit.id)}
+                        className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </td>
                   </tr>
@@ -204,7 +376,9 @@ export default function UnitPage() {
             </table>
 
             {filteredUnits.length === 0 && (
-              <div className="text-center py-12 text-gray-500">No units found</div>
+              <div className="text-center py-12 text-gray-500">
+                No units found
+              </div>
             )}
           </div>
         </div>
@@ -213,61 +387,139 @@ export default function UnitPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-lg shadow-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">{editingUnit ? "Edit Unit" : "Add Unit"}</h2>
+          <form
+            onSubmit={handleSave}
+            className="bg-white w-[400px] rounded-lg shadow-lg p-6"
+          >
+            <h2 className="text-lg font-semibold mb-4">
+              {editingUnit ? "Edit Unit" : "Add Unit"}
+            </h2>
 
             {/* Name */}
-            <label className="block text-sm font-medium">Name(*)</label>
+            <label htmlFor="unitName" className="block text-sm font-medium">
+              Name(*)
+            </label>
             <input
+              id="unitName"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full border rounded px-3 py-2 mt-1 mb-3"
               placeholder="Enter unit name"
+              required
             />
 
             {/* Branch */}
-            <label className="block text-sm font-medium">Branch(*)</label>
-            <select value={formBranch} onChange={(e) => setFormBranch(e.target.value)} className="w-full border rounded px-3 py-2 mt-1 mb-3">
-              <option value="">-- Select Branch --</option>
-              <option value="Jakarta Office">Jakarta Office</option>
-              <option value="Surabaya Office">Surabaya Office</option>
+            <label htmlFor="unitBranch" className="block text-sm font-medium">
+              Branch(*)
+            </label>
+            <select
+              id="unitBranch"
+              value={formBranchId}
+              onChange={(e) => {
+                const newBranchId = parseInt(e.target.value);
+                setFormBranchId(newBranchId);
+                setFormDivisionId("");
+                setFormDepartmentId("");
+              }}
+              className="w-full border rounded px-3 py-2 mt-1 mb-3"
+              required
+            >
+              <option value="" disabled>
+                -- Select Branch --
+              </option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
             </select>
 
             {/* Division */}
-            <label className="block text-sm font-medium">Division(*)</label>
-            <select value={formDivision} onChange={(e) => setFormDivision(e.target.value)} className="w-full border rounded px-3 py-2 mt-1 mb-3">
-              <option value="">-- Select Division --</option>
-              <option value="IT Division">IT Division</option>
-              <option value="HR Division">HR Division</option>
-              <option value="Finance Division">Finance Division</option>
+            <label htmlFor="unitDivision" className="block text-sm font-medium">
+              Division(*)
+            </label>
+            <select
+              id="unitDivision"
+              value={formDivisionId}
+              onChange={(e) => {
+                const newDivisionId = parseInt(e.target.value);
+                setFormDivisionId(newDivisionId);
+                setFormDepartmentId("");
+              }}
+              className="w-full border rounded px-3 py-2 mt-1 mb-3"
+              required
+              disabled={formBranchId === ""}
+            >
+              <option value="" disabled>
+                -- Select Division --
+              </option>
+              {modalDivisions.map((div) => (
+                <option key={div.id} value={div.id}>
+                  {div.name}
+                </option>
+              ))}
             </select>
 
             {/* Department */}
-            <label className="block text-sm font-medium">Department(*)</label>
-            <select value={formDepartment} onChange={(e) => setFormDepartment(e.target.value)} className="w-full border rounded px-3 py-2 mt-1 mb-3">
-              <option value="">-- Select Department --</option>
-              <option value="Software Development">Software Development</option>
-              <option value="Recruitment">Recruitment</option>
-              <option value="Accounting">Accounting</option>
+            <label
+              htmlFor="unitDepartment"
+              className="block text-sm font-medium"
+            >
+              Department(*)
+            </label>
+            <select
+              id="unitDepartment"
+              value={formDepartmentId}
+              onChange={(e) => setFormDepartmentId(parseInt(e.target.value))}
+              className="w-full border rounded px-3 py-2 mt-1 mb-3"
+              required
+              disabled={formDivisionId === ""}
+            >
+              <option value="" disabled>
+                -- Select Department --
+              </option>
+              {modalDepartments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
 
             {/* Status */}
-            <label className="block text-sm font-medium">Status(*)</label>
-            <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as "Active" | "Inactive")} className="w-full border rounded px-3 py-2 mt-1 mb-4">
+            <label htmlFor="unitStatus" className="block text-sm font-medium">
+              Status(*)
+            </label>
+            <select
+              id="unitStatus"
+              value={formStatus}
+              onChange={(e) =>
+                setFormStatus(e.target.value as "Active" | "Inactive")
+              }
+              className="w-full border rounded px-3 py-2 mt-1 mb-4"
+              required
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
 
             {/* Buttons */}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setModalOpen(false)} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              <button
+                type="submit"
+                onClick={handleSave}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
                 Save
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, FileText, Plus, Edit2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
 
 interface EmployeeType {
   id: number;
@@ -10,13 +10,8 @@ interface EmployeeType {
 }
 
 export default function EmployeeTypePage() {
-  const [types, setTypes] = useState<EmployeeType[]>([
-    { id: 1, name: "Full-Time", status: "Active" },
-    { id: 2, name: "Part-Time", status: "Active" },
-    { id: 3, name: "Freelancer", status: "Inactive" },
-    { id: 4, name: "Outsourcing", status: "Active" },
-  ]);
-
+  const [types, setTypes] = useState<EmployeeType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("All Status");
 
@@ -26,10 +21,88 @@ export default function EmployeeTypePage() {
   const [formName, setFormName] = useState("");
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
 
+  const API_URL = "http://localhost:3000/api/employee-types";
+
+  // 🔹 Fetch Data (READ)
+  const fetchTypes = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setTypes(
+          data.map((t: any) => ({
+            ...t,
+            status: t.status as "Active" | "Inactive",
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch employee types:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTypes();
+  }, []);
+
+  // 🔹 Save Data (CREATE/UPDATE)
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName || !formStatus) {
+      alert("Nama dan Status wajib diisi.");
+      return;
+    }
+
+    const method = editingType ? "PUT" : "POST";
+    const url = editingType ? `${API_URL}/${editingType.id}` : API_URL;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formName, status: formStatus }),
+      });
+
+      if (response.ok) {
+        alert(`Employee Type berhasil di${editingType ? "update" : "tambah"}!`);
+        fetchTypes();
+        setModalOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menyimpan Employee Type: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+    }
+  };
+
+  // 🔹 Delete Data (DELETE)
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus Employee Type ini?"))
+      return;
+
+    try {
+      const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        alert("Employee Type berhasil dihapus!");
+        fetchTypes();
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menghapus Employee Type: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat menghapus data.");
+    }
+  };
+
   // Filter logic
   const filteredTypes = types.filter((t) => {
     const matchesName = t.name.toLowerCase().includes(filterName.toLowerCase());
-    const matchesStatus = filterStatus === "All Status" || t.status === filterStatus;
+    const matchesStatus =
+      filterStatus === "All Status" || t.status === filterStatus;
     return matchesName && matchesStatus;
   });
 
@@ -50,25 +123,9 @@ export default function EmployeeTypePage() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (editingType) {
-      // Edit existing
-      setTypes((prev) =>
-        prev.map((t) =>
-          t.id === editingType.id ? { ...t, name: formName, status: formStatus } : t
-        )
-      );
-    } else {
-      // Add new
-      const newType: EmployeeType = {
-        id: types.length + 1,
-        name: formName,
-        status: formStatus,
-      };
-      setTypes((prev) => [...prev, newType]);
-    }
-    setModalOpen(false);
-  };
+  if (isLoading) {
+    return <div className="p-6 text-center text-gray-700">Loading data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -156,12 +213,18 @@ export default function EmployeeTypePage() {
                         {type.status}
                       </span>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 flex gap-2">
                       <button
                         onClick={() => openEditModal(type)}
                         className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(type.id)}
+                        className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </td>
                   </tr>
@@ -169,7 +232,9 @@ export default function EmployeeTypePage() {
               </tbody>
             </table>
             {filteredTypes.length === 0 && (
-              <div className="text-center py-12 text-gray-500">No employee types found</div>
+              <div className="text-center py-12 text-gray-500">
+                No employee types found
+              </div>
             )}
           </div>
         </div>
@@ -178,26 +243,39 @@ export default function EmployeeTypePage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-lg shadow-lg p-6">
+          <form
+            onSubmit={handleSave}
+            className="bg-white w-[400px] rounded-lg shadow-lg p-6"
+          >
             <h2 className="text-lg font-semibold mb-4">
               {editingType ? "Edit Employee Type" : "Add Employee Type"}
             </h2>
 
             {/* Name */}
-            <label className="block text-sm font-medium">Name(*)</label>
+            <label htmlFor="typeName" className="block text-sm font-medium">
+              Name(*)
+            </label>
             <input
+              id="typeName"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full border rounded px-3 py-2 mt-1 mb-3"
               placeholder="Enter employee type name"
+              required
             />
 
             {/* Status */}
-            <label className="block text-sm font-medium">Status(*)</label>
+            <label htmlFor="typeStatus" className="block text-sm font-medium">
+              Status(*)
+            </label>
             <select
+              id="typeStatus"
               value={formStatus}
-              onChange={(e) => setFormStatus(e.target.value as "Active" | "Inactive")}
+              onChange={(e) =>
+                setFormStatus(e.target.value as "Active" | "Inactive")
+              }
               className="w-full border rounded px-3 py-2 mt-1 mb-4"
+              required
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -206,19 +284,20 @@ export default function EmployeeTypePage() {
             {/* Buttons */}
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
                 Save
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

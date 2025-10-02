@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, FileText, Plus, Edit2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
 
 interface EmployeeStatus {
   id: number;
@@ -10,25 +10,105 @@ interface EmployeeStatus {
 }
 
 export default function EmployeeStatusPage() {
-  const [statuses, setStatuses] = useState<EmployeeStatus[]>([
-    { id: 1, name: "Permanent", status: "Active" },
-    { id: 2, name: "Contract", status: "Active" },
-    { id: 3, name: "Intern", status: "Inactive" },
-  ]);
-
+  const [statuses, setStatuses] = useState<EmployeeStatus[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("All Status");
 
   // Modal state
   const [isModalOpen, setModalOpen] = useState(false);
-  const [editingStatus, setEditingStatus] = useState<EmployeeStatus | null>(null);
+  const [editingStatus, setEditingStatus] = useState<EmployeeStatus | null>(
+    null
+  );
   const [formName, setFormName] = useState("");
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
+
+  const API_URL = "http://localhost:3000/api/employee-statuses";
+
+  // 🔹 Fetch Data (READ)
+  const fetchStatuses = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setStatuses(
+          data.map((s: any) => ({
+            ...s,
+            status: s.status as "Active" | "Inactive",
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch employee statuses:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatuses();
+  }, []);
+
+  // 🔹 Save Data (CREATE/UPDATE)
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName || !formStatus) {
+      alert("Nama dan Status wajib diisi.");
+      return;
+    }
+
+    const method = editingStatus ? "PUT" : "POST";
+    const url = editingStatus ? `${API_URL}/${editingStatus.id}` : API_URL;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formName, status: formStatus }),
+      });
+
+      if (response.ok) {
+        alert(
+          `Employee Status berhasil di${editingStatus ? "update" : "tambah"}!`
+        );
+        fetchStatuses();
+        setModalOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menyimpan Employee Status: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+    }
+  };
+
+  // 🔹 Delete Data (DELETE)
+  const handleDelete = async (id: number) => {
+    if (
+      !window.confirm("Apakah Anda yakin ingin menghapus Employee Status ini?")
+    )
+      return;
+
+    try {
+      const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        alert("Employee Status berhasil dihapus!");
+        fetchStatuses();
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menghapus Employee Status: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Terjadi kesalahan saat menghapus data.");
+    }
+  };
 
   // Filter logic
   const filteredStatuses = statuses.filter((s) => {
     const matchesName = s.name.toLowerCase().includes(filterName.toLowerCase());
-    const matchesStatus = filterStatus === "All Status" || s.status === filterStatus;
+    const matchesStatus =
+      filterStatus === "All Status" || s.status === filterStatus;
     return matchesName && matchesStatus;
   });
 
@@ -49,25 +129,9 @@ export default function EmployeeStatusPage() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (editingStatus) {
-      // Edit existing
-      setStatuses((prev) =>
-        prev.map((s) =>
-          s.id === editingStatus.id ? { ...s, name: formName, status: formStatus } : s
-        )
-      );
-    } else {
-      // Add new
-      const newStatus: EmployeeStatus = {
-        id: statuses.length + 1,
-        name: formName,
-        status: formStatus,
-      };
-      setStatuses((prev) => [...prev, newStatus]);
-    }
-    setModalOpen(false);
-  };
+  if (isLoading) {
+    return <div className="p-6 text-center text-gray-700">Loading data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -155,12 +219,18 @@ export default function EmployeeStatusPage() {
                         {status.status}
                       </span>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 flex gap-2">
                       <button
                         onClick={() => openEditModal(status)}
                         className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(status.id)}
+                        className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </td>
                   </tr>
@@ -168,7 +238,9 @@ export default function EmployeeStatusPage() {
               </tbody>
             </table>
             {filteredStatuses.length === 0 && (
-              <div className="text-center py-12 text-gray-500">No employee statuses found</div>
+              <div className="text-center py-12 text-gray-500">
+                No employee statuses found
+              </div>
             )}
           </div>
         </div>
@@ -177,26 +249,39 @@ export default function EmployeeStatusPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-lg shadow-lg p-6">
+          <form
+            onSubmit={handleSave}
+            className="bg-white w-[400px] rounded-lg shadow-lg p-6"
+          >
             <h2 className="text-lg font-semibold mb-4">
               {editingStatus ? "Edit Employee Status" : "Add Employee Status"}
             </h2>
 
             {/* Name */}
-            <label className="block text-sm font-medium">Name(*)</label>
+            <label htmlFor="statusName" className="block text-sm font-medium">
+              Name(*)
+            </label>
             <input
+              id="statusName"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               className="w-full border rounded px-3 py-2 mt-1 mb-3"
               placeholder="Enter employee status name"
+              required
             />
 
             {/* Status */}
-            <label className="block text-sm font-medium">Status(*)</label>
+            <label htmlFor="statusStatus" className="block text-sm font-medium">
+              Status(*)
+            </label>
             <select
+              id="statusStatus"
               value={formStatus}
-              onChange={(e) => setFormStatus(e.target.value as "Active" | "Inactive")}
+              onChange={(e) =>
+                setFormStatus(e.target.value as "Active" | "Inactive")
+              }
               className="w-full border rounded px-3 py-2 mt-1 mb-4"
+              required
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -205,19 +290,20 @@ export default function EmployeeStatusPage() {
             {/* Buttons */}
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
                 Save
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

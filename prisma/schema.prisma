@@ -75,6 +75,24 @@ model Unit {
   @@unique([name, departmentId])
 }
 
+model EmployeeType {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  status String
+}
+
+model JobLevel {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  status String
+}
+
+model EmployeeStatus {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  status String
+}
+
 model Employee {
   id                      Int       @id @default(autoincrement())
   name                    String

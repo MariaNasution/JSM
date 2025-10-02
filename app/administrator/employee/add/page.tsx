@@ -28,6 +28,7 @@ interface EmployeeData {
   endEmploymentStatusDate: string;
   username: string;
   password: string;
+   role: string;
 }
 
 export default function AddEmployee() {
@@ -55,6 +56,8 @@ export default function AddEmployee() {
     endEmploymentStatusDate: "",
     username: "",
     password: "",
+    role:"",
+    
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -442,29 +445,30 @@ export default function AddEmployee() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sign Date
-                      </label>
-                      <input
-                        type="date"
-                        name="signDate"
-                        value={employeeData.signDate}
-                        onChange={handleChange}
-                        className="border p-2 rounded w-full"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Employment Status Date
-                      </label>
-                      <input
-                        type="date"
-                        name="endEmploymentStatusDate"
-                        value={employeeData.endEmploymentStatusDate}
-                        onChange={handleChange}
-                        className="border p-2 rounded w-full"
-                      />
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sign Date
+                    </label>
+                    <input
+                      type="date"
+                      name="signDate"
+                      value={employeeData.signDate}
+                      onChange={handleChange}
+                      className="border p-2 rounded w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Employment Status Date
+                    </label>
+                    <input
+                      type="date"
+                      name="endEmploymentStatusDate"
+                      value={employeeData.endEmploymentStatusDate}
+                      onChange={handleChange}
+                      className="border p-2 rounded w-full"
+                    />
+                  </div>
+
                   </div>
                   <div className="flex justify-between mt-6">
                     <button
@@ -490,10 +494,8 @@ export default function AddEmployee() {
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">Account</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Username
-                      </label>
+                    <label className="col-span-2">
+                      Username
                       <input
                         type="text"
                         name="username"
@@ -502,11 +504,9 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password
-                      </label>
+                    </label>
+                    <label className="col-span-2">
+                      Password
                       <input
                         type="password"
                         name="password"
@@ -515,7 +515,24 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </div>
+                    </label>
+                    <label className="col-span-2">
+                      Role
+                      <select
+                        name="role"
+                        value={employeeData.role}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                        required
+                      >
+                        <option value="">Select Role</option>
+                        <option value="Admin">Learner</option>
+                        <option value="Manager">Trainer</option>
+                        <option value="Employee">Administrator</option>
+                        <option value="Employee">Super Admin</option>
+                        
+                      </select>
+                    </label>
                   </div>
                   <div className="flex justify-between mt-6">
                     <button

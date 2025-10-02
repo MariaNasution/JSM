@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Users, Bell, FileText } from "lucide-react";
 import Link from "next/link";
 
@@ -28,7 +28,11 @@ interface EmployeeData {
   endEmploymentStatusDate: string;
 }
 
-export default function AddEmployee() {
+export default function EditEmployeePage() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+
   const [step, setStep] = useState(1);
   const [employeeData, setEmployeeData] = useState<EmployeeData>({
     firstName: "",
@@ -52,11 +56,61 @@ export default function AddEmployee() {
     signDate: "",
     endEmploymentStatusDate: "",
   });
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  const nextStep = () => setStep((prev) => prev + 1);
-  const prevStep = () => setStep((prev) => prev - 1);
+  useEffect(() => {
+    if (id) {
+      fetchEmployeeData();
+    }
+  }, [id]);
+
+  const fetchEmployeeData = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/employees/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeeData({
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          placeOfBirth: data.placeOfBirth || "",
+          birthdate: data.birthdate
+            ? new Date(data.birthdate).toISOString().split("T")[0]
+            : "",
+          gender: data.gender || "",
+          religion: data.religion || "",
+          maritalStatus: data.maritalStatus || "",
+          bloodType: data.bloodType || "",
+          email: data.email || "",
+          phoneNumber: data.phoneNumber || "",
+          companyName: data.companyName || "",
+          employeeId: data.employeeId || "",
+          division: data.division || "",
+          department: data.department || "",
+          unit: data.unit || "",
+          jobLevel: data.jobLevel || "",
+          employeeStatus: data.status || "",
+          joinDate: data.joinDate
+            ? new Date(data.joinDate).toISOString().split("T")[0]
+            : "",
+          signDate: data.signDate
+            ? new Date(data.signDate).toISOString().split("T")[0]
+            : "",
+          endEmploymentStatusDate: data.endEmploymentStatusDate
+            ? new Date(data.endEmploymentStatusDate).toISOString().split("T")[0]
+            : "",
+        });
+      } else {
+        alert("Employee not found.");
+        router.push("/administrator/employee");
+      }
+    } catch (error) {
+      console.error("Error fetching employee data:", error);
+      alert("Failed to load employee data.");
+      router.push("/administrator/employee");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -65,33 +119,38 @@ export default function AddEmployee() {
     setEmployeeData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/employees", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(employeeData),
-      });
+      const response = await fetch(
+        `http://localhost:3000/api/employees/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(employeeData),
+        }
+      );
 
       if (response.ok) {
-        alert("Employee added successfully!");
+        alert("Employee updated successfully!");
         router.push("/administrator/employee");
       } else {
         const errorData = await response.json();
-        alert(`Error adding employee: ${errorData.error}`);
+        alert(`Failed to update employee: ${errorData.error}`);
       }
     } catch (error) {
-      console.error("Error adding employee:", error);
-      alert("Error adding employee.");
+      console.error("Error updating employee:", error);
+      alert("Error updating employee.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading employee data...</div>;
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -108,7 +167,7 @@ export default function AddEmployee() {
                   Employee
                 </Link>
                 <span>/</span>
-                <span>Add Employee</span>
+                <span>Edit Employee</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -120,7 +179,6 @@ export default function AddEmployee() {
               </button>
             </div>
           </div>
-
           <div className="p-8">
             <div className="flex items-center gap-6 mb-6">
               <div
@@ -133,6 +191,7 @@ export default function AddEmployee() {
                 </span>
                 <span>Personal Data</span>
               </div>
+              <div className="w-10 border-t border-gray-300" />
               <div
                 className={`flex items-center gap-2 ${
                   step === 2 ? "text-blue-600 font-bold" : "text-gray-500"
@@ -145,47 +204,50 @@ export default function AddEmployee() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              {step === 1 && (
-                <div className="bg-white shadow rounded-lg p-6">
-                  <h2 className="text-lg font-semibold mb-4">Personal Data</h2>
+            {step === 1 && (
+              <form>
+                <div className="bg-white shadow p-6 rounded-md">
+                  <h2 className="text-lg font-semibold mb-4">
+                    Edit Personal Data
+                  </h2>
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       name="firstName"
-                      value={employeeData.firstName}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="First Name"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.firstName}
+                      onChange={handleChange}
                     />
                     <input
                       name="lastName"
-                      value={employeeData.lastName}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Last Name"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.lastName}
+                      onChange={handleChange}
                     />
                     <input
                       name="placeOfBirth"
-                      value={employeeData.placeOfBirth}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Place Of Birth"
                       className="border p-2 rounded"
+                      value={employeeData.placeOfBirth}
+                      onChange={handleChange}
                     />
                     <input
-                      type="date"
                       name="birthdate"
-                      value={employeeData.birthdate}
-                      onChange={handleChange}
+                      type="date"
                       placeholder="Birthdate"
                       className="border p-2 rounded"
+                      value={employeeData.birthdate}
+                      onChange={handleChange}
                     />
                     <select
                       name="gender"
+                      className="border p-2 rounded"
                       value={employeeData.gender}
                       onChange={handleChange}
-                      className="border p-2 rounded"
                     >
                       <option value="">Gender</option>
                       <option value="Male">Male</option>
@@ -193,9 +255,9 @@ export default function AddEmployee() {
                     </select>
                     <select
                       name="religion"
+                      className="border p-2 rounded"
                       value={employeeData.religion}
                       onChange={handleChange}
-                      className="border p-2 rounded"
                     >
                       <option value="">Religion</option>
                       <option value="Islam">Islam</option>
@@ -204,9 +266,9 @@ export default function AddEmployee() {
                     </select>
                     <select
                       name="maritalStatus"
+                      className="border p-2 rounded"
                       value={employeeData.maritalStatus}
                       onChange={handleChange}
-                      className="border p-2 rounded"
                     >
                       <option value="">Marital Status</option>
                       <option value="Single">Single</option>
@@ -214,9 +276,9 @@ export default function AddEmployee() {
                     </select>
                     <select
                       name="bloodType"
+                      className="border p-2 rounded"
                       value={employeeData.bloodType}
                       onChange={handleChange}
-                      className="border p-2 rounded"
                     >
                       <option value="">Blood Type</option>
                       <option value="A">A</option>
@@ -227,18 +289,18 @@ export default function AddEmployee() {
                     <input
                       name="email"
                       type="email"
-                      value={employeeData.email}
-                      onChange={handleChange}
                       placeholder="Email"
                       className="border p-2 rounded col-span-2"
+                      value={employeeData.email}
+                      onChange={handleChange}
                     />
                     <input
                       name="phoneNumber"
                       type="tel"
-                      value={employeeData.phoneNumber}
-                      onChange={handleChange}
                       placeholder="Phone Number"
                       className="border p-2 rounded col-span-2"
+                      value={employeeData.phoneNumber}
+                      onChange={handleChange}
                     />
                   </div>
                   <div className="flex justify-between mt-6">
@@ -251,72 +313,76 @@ export default function AddEmployee() {
                     </button>
                     <button
                       type="button"
-                      onClick={nextStep}
                       className="bg-blue-600 text-white px-4 py-2 rounded"
+                      onClick={() => setStep(2)}
                     >
                       Next
                     </button>
                   </div>
                 </div>
-              )}
+              </form>
+            )}
 
-              {step === 2 && (
-                <div className="bg-white shadow rounded-lg p-6">
+            {step === 2 && (
+              <form onSubmit={handleUpdate}>
+                <div className="bg-white shadow p-6 rounded-md">
                   <h2 className="text-lg font-semibold mb-4">
-                    Employment Data
+                    Edit Employment Data
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       name="companyName"
-                      value={employeeData.companyName}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Company Name"
                       className="border p-2 rounded col-span-2"
+                      value={employeeData.companyName}
+                      onChange={handleChange}
                     />
                     <input
                       name="employeeId"
-                      value={employeeData.employeeId}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Employee ID"
                       className="border p-2 rounded col-span-2"
+                      value={employeeData.employeeId}
+                      onChange={handleChange}
                     />
                     <input
                       name="division"
-                      value={employeeData.division}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Division"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.division}
+                      onChange={handleChange}
                     />
                     <input
                       name="department"
-                      value={employeeData.department}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Department"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.department}
+                      onChange={handleChange}
                     />
                     <input
                       name="unit"
-                      value={employeeData.unit}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Unit"
                       className="border p-2 rounded"
+                      value={employeeData.unit}
+                      onChange={handleChange}
                     />
                     <input
                       name="jobLevel"
-                      value={employeeData.jobLevel}
-                      onChange={handleChange}
+                      type="text"
                       placeholder="Job Level"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.jobLevel}
+                      onChange={handleChange}
                     />
                     <select
                       name="employeeStatus"
+                      className="border p-2 rounded"
                       value={employeeData.employeeStatus}
                       onChange={handleChange}
-                      className="border p-2 rounded"
-                      required
                     >
                       <option value="">Employee Status</option>
                       <option value="Active">Active</option>
@@ -324,36 +390,35 @@ export default function AddEmployee() {
                       <option value="On Contract">On Contract</option>
                     </select>
                     <input
-                      type="date"
                       name="joinDate"
-                      value={employeeData.joinDate}
-                      onChange={handleChange}
+                      type="date"
                       placeholder="Join Date"
                       className="border p-2 rounded"
-                      required
+                      value={employeeData.joinDate}
+                      onChange={handleChange}
                     />
                     <input
-                      type="date"
                       name="signDate"
-                      value={employeeData.signDate}
-                      onChange={handleChange}
+                      type="date"
                       placeholder="Sign Date"
                       className="border p-2 rounded"
+                      value={employeeData.signDate}
+                      onChange={handleChange}
                     />
                     <input
-                      type="date"
                       name="endEmploymentStatusDate"
-                      value={employeeData.endEmploymentStatusDate}
-                      onChange={handleChange}
+                      type="date"
                       placeholder="End Employment Status Date"
                       className="border p-2 rounded col-span-2"
+                      value={employeeData.endEmploymentStatusDate}
+                      onChange={handleChange}
                     />
                   </div>
                   <div className="flex justify-between mt-6">
                     <button
                       type="button"
-                      onClick={prevStep}
                       className="bg-green-500 text-white px-4 py-2 rounded"
+                      onClick={() => setStep(1)}
                     >
                       Back
                     </button>
@@ -362,12 +427,12 @@ export default function AddEmployee() {
                       className="bg-blue-600 text-white px-4 py-2 rounded"
                       disabled={loading}
                     >
-                      {loading ? "Saving..." : "Save"}
+                      {loading ? "Updating..." : "Update"}
                     </button>
                   </div>
                 </div>
-              )}
-            </form>
+              </form>
+            )}
           </div>
         </div>
       </div>

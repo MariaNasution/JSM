@@ -14,7 +14,7 @@ model User {
 }
 
 model Employee {
-  id                      Int      @id @default(autoincrement())
+  id                      Int       @id @default(autoincrement())
   name                    String
   firstName               String?
   lastName                String?

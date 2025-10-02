@@ -207,7 +207,7 @@ export default function EmployeeList() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link href={`/administrator/employee/edit/${emp.id}`}>
+                        <Link href={`/administrator/employee/${emp.id}`}>
                           <button className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
                             <Edit2 size={16} />
                           </button>

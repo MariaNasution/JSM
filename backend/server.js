@@ -1,8 +1,9 @@
 const express = require("express");
 const next = require("next");
 const cors = require("cors");
-
+// Import Employee Routes
 const employeeRoutes = require("./administrator/routes/employeeRoutes");
+// Import Data Master Routes (Asumsi semua rute master sudah dibuat di folder routes/)
 const branchRoutes = require("./administrator/routes/branchRoutes");
 const divisionRoutes = require("./administrator/routes/divisionRoutes");
 const departmentRoutes = require("./administrator/routes/departmentRoutes");
@@ -25,6 +26,7 @@ app.prepare().then(async () => {
   server.use(express.json());
   server.use(cors());
 
+  // Daftarkan semua rute API
   server.use("/api/employees", employeeRoutes);
   server.use("/api/branches", branchRoutes);
   server.use("/api/divisions", divisionRoutes);
@@ -34,6 +36,7 @@ app.prepare().then(async () => {
   server.use("/api/job-levels", jobLevelRoutes);
   server.use("/api/employee-statuses", employeeStatusRoutes);
 
+  // Fallback ke Next.js handler
   server.use((req, res) => {
     return handle(req, res);
   });

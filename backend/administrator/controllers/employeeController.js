@@ -1,13 +1,15 @@
 const employeeModel = require("../models/employeeModel");
 const userModel = require("../models/userModel");
-// const bcrypt = require('bcryptjs'); // bcryptjs jika ingin menggunakan hashing
+// const bcrypt = require('bcryptjs'); // Anda harus menginstal bcryptjs jika ingin menggunakan hashing
 
 const employeeController = {
+  // Ambil semua data karyawan (dengan data user terkait)
   getAllEmployees: async (req, res) => {
     try {
       const employees = await employeeModel.findMany({
         include: { user: true },
       });
+      // Flatten data untuk frontend
       const flatEmployees = employees.map((emp) => ({
         ...emp,
         role: emp.user ? emp.user.role : "N/A",
@@ -20,6 +22,7 @@ const employeeController = {
     }
   },
 
+  // Ambil satu karyawan berdasarkan ID
   getEmployeeById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -41,6 +44,7 @@ const employeeController = {
     }
   },
 
+  // Tambah karyawan baru
   createEmployee: async (req, res) => {
     try {
       const {
@@ -69,6 +73,7 @@ const employeeController = {
         role,
       } = req.body;
 
+      // Cek duplikasi Username
       const existingUser = await userModel.findUnique({ where: { username } });
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists." });
@@ -108,7 +113,7 @@ const employeeController = {
       await userModel.create({
         data: {
           username,
-          password,
+          password, // Saat ini tanpa hash
           email: email,
           role: role,
           employeeId: newEmployee.id,
@@ -124,6 +129,7 @@ const employeeController = {
     }
   },
 
+  // Perbarui data karyawan
   updateEmployee: async (req, res) => {
     try {
       const { id } = req.params;
@@ -190,6 +196,7 @@ const employeeController = {
         email: email,
         role: role,
       };
+      // Hanya update password jika field password diisi
       if (password && password.length > 0) {
         // userUpdateData.password = await bcrypt.hash(password, 10);
         userUpdateData.password = password;
@@ -242,6 +249,116 @@ const employeeController = {
       res.json({ message: "Role updated successfully." });
     } catch (err) {
       res.status(400).json({ error: "Failed to update role. " + err.message });
+    }
+  },
+
+  // 🔹 FUNGSI UNTUK EXPORT CSV (MEMASTIKAN SEMUA FIELD TERAMBIL)
+  exportEmployeesToCsv: async (req, res) => {
+    try {
+      // Menggunakan 'select' eksplisit untuk mendapatkan semua kolom yang diinginkan
+      const employees = await employeeModel.findMany({
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          placeOfBirth: true,
+          gender: true,
+          religion: true,
+          maritalStatus: true,
+          bloodType: true,
+          email: true,
+          phoneNumber: true,
+          companyName: true,
+          employeeId: true,
+          division: true,
+          department: true,
+          unit: true,
+          jobLevel: true,
+          status: true,
+          joinDate: true,
+          birthdate: true,
+          signDate: true,
+          endEmploymentStatusDate: true,
+          user: {
+            select: { username: true, role: true },
+          },
+        },
+      });
+
+      if (!employees || employees.length === 0) {
+        return res.status(404).send("No employee data found to export.");
+      }
+
+      // Definisikan Header CSV LENGKAP
+      const csvHeader = [
+        "ID",
+        "Full Name",
+        "First Name",
+        "Last Name",
+        "Email",
+        "Phone Number",
+        "Company Name",
+        "Employee ID",
+        "Division",
+        "Department",
+        "Unit",
+        "Job Level",
+        "Status",
+        "Join Date",
+        "Birthdate",
+        "Gender",
+        "Religion",
+        "Marital Status",
+        "Blood Type",
+        "Sign Date",
+        "End Status Date",
+        "Username",
+        "Role",
+      ].join(",");
+
+      const formatDate = (date: Date | null | undefined) =>
+        date ? new Date(date).toLocaleDateString("en-US") : "";
+
+      const csvRows = employees.map((emp) => {
+        return [
+          emp.id,
+          `"${emp.name}"`,
+          `"${emp.firstName || ""}"`,
+          `"${emp.lastName || ""}"`,
+          `"${emp.email || ""}"`,
+          `"${emp.phoneNumber || ""}"`,
+          `"${emp.companyName || ""}"`,
+          `"${emp.employeeId || ""}"`,
+          `"${emp.division || ""}"`,
+          `"${emp.department || ""}"`,
+          `"${emp.unit || ""}"`,
+          `"${emp.jobLevel || ""}"`,
+          `"${emp.status || ""}"`,
+          formatDate(emp.joinDate),
+          formatDate(emp.birthdate),
+          `"${emp.gender || ""}"`,
+          `"${emp.religion || ""}"`,
+          `"${emp.maritalStatus || ""}"`,
+          `"${emp.bloodType || ""}"`,
+          formatDate(emp.signDate),
+          formatDate(emp.endEmploymentStatusDate),
+          `"${emp.user?.username || ""}"`,
+          `"${emp.user?.role || ""}"`,
+        ].join(",");
+      });
+
+      const csvData = [csvHeader, ...csvRows].join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=employee_data.csv"
+      );
+      res.status(200).send(csvData);
+    } catch (err) {
+      console.error("Export failed:", err);
+      res.status(500).json({ error: "Failed to process data for export." });
     }
   },
 };

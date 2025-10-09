@@ -96,6 +96,11 @@ export default function EmployeeList() {
     }
   };
 
+  const handleExport = () => {
+    // Memanggil endpoint backend yang menghasilkan CSV
+    window.location.href = "http://localhost:3000/api/employees/export";
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Active":
@@ -184,7 +189,10 @@ export default function EmployeeList() {
                 Add Employee
               </button>
             </Link>
-            <button className="flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+            <button
+              onClick={handleExport} // 🔹 Memanggil fungsi export
+              className="flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+            >
               <Download size={18} />
               Export
             </button>
@@ -329,3 +337,4 @@ export default function EmployeeList() {
     </div>
   );
 }
+ 

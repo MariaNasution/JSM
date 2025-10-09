@@ -1,9 +1,15 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Users, Bell, FileText } from "lucide-react";
 import Link from "next/link";
+
+interface MasterData {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
 
 interface EmployeeData {
   firstName: string;
@@ -69,11 +75,91 @@ export default function EditEmployeePage() {
   });
   const [loading, setLoading] = useState(true);
 
+  // 🔹 State untuk Data Master
+  const [masterData, setMasterData] = useState<{ [key: string]: MasterData[] }>(
+    {
+      branches: [],
+      divisions: [],
+      departments: [],
+      units: [],
+      jobLevels: [],
+      employeeStatuses: [],
+      employeeTypes: [],
+    }
+  );
+  const [isMasterLoading, setIsMasterLoading] = useState(true);
+
+  // 🔹 Fetch semua data master yang diperlukan
   useEffect(() => {
-    if (id) {
+    const fetchMasterData = async () => {
+      setIsMasterLoading(true);
+      const endpoints = {
+        branches: "api/branches",
+        divisions: "api/divisions",
+        departments: "api/departments",
+        units: "api/units",
+        jobLevels: "api/job-levels",
+        employeeStatuses: "api/employee-statuses",
+      };
+
+      const promises = Object.entries(endpoints).map(([key, endpoint]) =>
+        fetch(`http://localhost:3000/${endpoint}`).then((res) =>
+          res.json().catch(() => [])
+        )
+      );
+
+      const results = await Promise.all(promises);
+      const newMasterData: { [key: string]: MasterData[] } = {};
+      Object.keys(endpoints).forEach((key, index) => {
+        newMasterData[key] = results[index].map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          branchId: item.branchId,
+          divisionId: item.divisionId,
+          departmentId: item.departmentId,
+        }));
+      });
+      setMasterData(newMasterData);
+      setIsMasterLoading(false);
+    };
+    fetchMasterData();
+  }, []);
+
+  // 🔹 Filtering Data Master (Cascading Logic)
+  const filteredDivisions = useMemo(() => {
+    const selectedBranch = masterData.branches.find(
+      (b) => b.name === employeeData.companyName
+    );
+    if (!selectedBranch) return [];
+    return masterData.divisions.filter((d) => d.branchId === selectedBranch.id);
+  }, [employeeData.companyName, masterData.divisions, masterData.branches]);
+
+  const filteredDepartments = useMemo(() => {
+    const selectedDivision = masterData.divisions.find(
+      (d) => d.name === employeeData.division
+    );
+    if (!selectedDivision) return [];
+    return masterData.departments.filter(
+      (d) => d.divisionId === selectedDivision.id
+    );
+  }, [employeeData.division, masterData.departments, masterData.divisions]);
+
+  const filteredUnits = useMemo(() => {
+    const selectedDepartment = masterData.departments.find(
+      (d) => d.name === employeeData.department
+    );
+    if (!selectedDepartment) return [];
+    return masterData.units.filter(
+      (u) => u.departmentId === selectedDepartment.id
+    );
+  }, [employeeData.department, masterData.units, masterData.departments]);
+
+  // 🔹 Fetch Data Employee
+  useEffect(() => {
+    if (id && !isMasterLoading) {
       fetchEmployeeData();
     }
-  }, [id]);
+  }, [id, isMasterLoading]);
 
   const fetchEmployeeData = async () => {
     try {
@@ -110,7 +196,7 @@ export default function EditEmployeePage() {
             ? new Date(data.endEmploymentStatusDate).toISOString().split("T")[0]
             : "",
           username: data.username || "",
-          password: "",
+          password: "", // Password selalu kosong saat edit untuk keamanan
           role: data.role || "",
         });
       } else {
@@ -133,9 +219,23 @@ export default function EditEmployeePage() {
     setEmployeeData((prevData) => ({ ...prevData, [name]: value }));
   };
 
+  const nextStep = () => setStep((prev) => prev + 1);
+  const prevStep = () => setStep((prev) => prev - 1);
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Clone object for conditional deletion (TS fix)
+    const dataToSend = {
+      ...employeeData,
+      status: employeeData.employeeStatus,
+    };
+
+    // Only send password if user explicitly entered a new one
+    if (dataToSend.password === "") {
+      delete (dataToSend as any).password;
+    }
 
     try {
       const response = await fetch(
@@ -143,7 +243,7 @@ export default function EditEmployeePage() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(employeeData),
+          body: JSON.stringify(dataToSend),
         }
       );
 
@@ -162,7 +262,7 @@ export default function EditEmployeePage() {
     }
   };
 
-  if (loading) {
+  if (loading || isMasterLoading) {
     return <div className="p-6 text-center">Loading employee data...</div>;
   }
 
@@ -175,7 +275,10 @@ export default function EditEmployeePage() {
             <div className="flex items-center gap-2">
               <Users size={20} />
               <div className="flex items-center gap-2 text-sm">
-                <Link href="/administrator/employee" className="hover:underline">
+                <Link
+                  href="/administrator/employee"
+                  className="hover:underline"
+                >
                   Employee
                 </Link>
                 <span>/</span>
@@ -183,10 +286,10 @@ export default function EditEmployeePage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-blue-600 rounded">
+              <button type="button" className="p-2 hover:bg-blue-600 rounded">
                 <Bell size={20} />
               </button>
-              <button className="p-2 hover:bg-blue-600 rounded">
+              <button type="button" className="p-2 hover:bg-blue-600 rounded">
                 <FileText size={20} />
               </button>
             </div>
@@ -195,7 +298,6 @@ export default function EditEmployeePage() {
           {/* STEPS */}
           <div className="p-8">
             <div className="flex items-center gap-6 mb-6">
-              {/* Step Indicators */}
               {["Personal Data", "Employment Data", "Account Data"].map(
                 (label, idx) => (
                   <div
@@ -271,8 +373,8 @@ export default function EditEmployeePage() {
                         value={employeeData.gender}
                         onChange={handleChange}
                       >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
+                        <option value="">Select Gender</option>{" "}
+                        <option value="Male">Male</option>{" "}
                         <option value="Female">Female</option>
                       </select>
                     </label>
@@ -284,9 +386,9 @@ export default function EditEmployeePage() {
                         value={employeeData.religion}
                         onChange={handleChange}
                       >
-                        <option value="">Select Religion</option>
-                        <option value="Islam">Islam</option>
-                        <option value="Christian">Christian</option>
+                        <option value="">Select Religion</option>{" "}
+                        <option value="Islam">Islam</option>{" "}
+                        <option value="Christian">Christian</option>{" "}
                         <option value="Hindu">Hindu</option>
                       </select>
                     </label>
@@ -298,8 +400,8 @@ export default function EditEmployeePage() {
                         value={employeeData.maritalStatus}
                         onChange={handleChange}
                       >
-                        <option value="">Select Status</option>
-                        <option value="Single">Single</option>
+                        <option value="">Select Status</option>{" "}
+                        <option value="Single">Single</option>{" "}
                         <option value="Married">Married</option>
                       </select>
                     </label>
@@ -311,10 +413,10 @@ export default function EditEmployeePage() {
                         value={employeeData.bloodType}
                         onChange={handleChange}
                       >
-                        <option value="">Select Type</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="O">O</option>
+                        <option value="">Select Type</option>{" "}
+                        <option value="A">A</option>{" "}
+                        <option value="B">B</option>{" "}
+                        <option value="O">O</option>{" "}
                         <option value="AB">AB</option>
                       </select>
                     </label>
@@ -363,25 +465,29 @@ export default function EditEmployeePage() {
             {step === 2 && (
               <form>
                 <div className="bg-white shadow p-6 rounded-md">
-                  <h2 className="text-lg font-semibold mb-4">Edit Employment Data</h2>
+                  <h2 className="text-lg font-semibold mb-4">
+                    Edit Employment Data
+                  </h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company Name
-                      </label>
-                      <input
+                    <label className="col-span-2">
+                      Company Name
+                      <select
                         name="companyName"
-                        type="text"
                         className="border p-2 rounded w-full"
                         value={employeeData.companyName}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Employee ID
-                      </label>
+                        disabled={!masterData.branches.length}
+                      >
+                        <option value="">Select Company Branch</option>
+                        {masterData.branches.map((b) => (
+                          <option key={b.id} value={b.name}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="col-span-2">
+                      Employee ID
                       <input
                         name="employeeId"
                         type="text"
@@ -389,64 +495,77 @@ export default function EditEmployeePage() {
                         value={employeeData.employeeId}
                         onChange={handleChange}
                       />
-                    </div>
+                    </label>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Division
-                      </label>
-                      <input
+                    <label>
+                      Division
+                      <select
                         name="division"
-                        type="text"
                         className="border p-2 rounded w-full"
                         value={employeeData.division}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Department
-                      </label>
-                      <input
+                        disabled={!employeeData.companyName}
+                      >
+                        <option value="">Select Division</option>
+                        {filteredDivisions.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Department
+                      <select
                         name="department"
-                        type="text"
                         className="border p-2 rounded w-full"
                         value={employeeData.department}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Unit
-                      </label>
-                      <input
+                        disabled={!employeeData.division}
+                      >
+                        <option value="">Select Department</option>
+                        {filteredDepartments.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Unit
+                      <select
                         name="unit"
-                        type="text"
                         className="border p-2 rounded w-full"
                         value={employeeData.unit}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Job Level
-                      </label>
-                      <input
+                        disabled={!employeeData.department}
+                      >
+                        <option value="">Select Unit</option>
+                        {filteredUnits.map((u) => (
+                          <option key={u.id} value={u.name}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Job Level
+                      <select
                         name="jobLevel"
-                        type="text"
                         className="border p-2 rounded w-full"
                         value={employeeData.jobLevel}
                         onChange={handleChange}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Employee Status
-                      </label>
+                      >
+                        <option value="">Select Job Level</option>
+                        {masterData.jobLevels.map((j) => (
+                          <option key={j.id} value={j.name}>
+                            {j.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Employee Status
                       <select
                         name="employeeStatus"
                         className="border p-2 rounded w-full"
@@ -454,16 +573,15 @@ export default function EditEmployeePage() {
                         onChange={handleChange}
                       >
                         <option value="">Select Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                        <option value="On Contract">On Contract</option>
+                        {masterData.employeeStatuses.map((e) => (
+                          <option key={e.id} value={e.name}>
+                            {e.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Join Date
-                      </label>
+                    </label>
+                    <label>
+                      Join Date
                       <input
                         name="joinDate"
                         type="date"
@@ -471,12 +589,9 @@ export default function EditEmployeePage() {
                         value={employeeData.joinDate}
                         onChange={handleChange}
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sign Date
-                      </label>
+                    </label>
+                    <label>
+                      Sign Date
                       <input
                         name="signDate"
                         type="date"
@@ -484,12 +599,9 @@ export default function EditEmployeePage() {
                         value={employeeData.signDate}
                         onChange={handleChange}
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Employment Status Date
-                      </label>
+                    </label>
+                    <label>
+                      End Employment Status Date
                       <input
                         name="endEmploymentStatusDate"
                         type="date"
@@ -497,9 +609,8 @@ export default function EditEmployeePage() {
                         value={employeeData.endEmploymentStatusDate}
                         onChange={handleChange}
                       />
-                    </div>
+                    </label>
                   </div>
-
                   <div className="flex justify-between mt-6">
                     <button
                       type="button"
@@ -528,42 +639,42 @@ export default function EditEmployeePage() {
                     Edit Account Data
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
-                    {[
-                      ["username", "Username", "text"],
-                      [
-                        "password",
-                        "Password (leave blank if not changing)",
-                        "password",
-                      ],
-                    ].map(([name, label, type]) => (
-                      <div key={name} className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {label}
-                        </label>
-                        <input
-                          type={type}
-                          name={name}
-                          value={(employeeData as any)[name]}
-                          onChange={handleChange}
-                          className="border p-2 rounded w-full"
-                        />
-                      </div>
-                    ))}
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Role
-                      </label>
+                      <label>Username</label>
+                      <input
+                        name="username"
+                        type="text"
+                        className="border p-2 rounded w-full"
+                        value={employeeData.username}
+                        onChange={handleChange}
+                        readOnly
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label>Password (leave blank if not changing)</label>
+                      <input
+                        name="password"
+                        type="password"
+                        className="border p-2 rounded w-full"
+                        value={employeeData.password}
+                        onChange={handleChange}
+                        placeholder="Enter new password or leave blank"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label>Role (*)</label>
                       <select
                         name="role"
                         value={employeeData.role}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
-                        <option value="">Select Role</option>
-                        <option value="Admin">Learner</option>
-                        <option value="Manager">Trainer</option>
-                        <option value="Employee">Administrator</option>
-                        <option value="Employee">Super Admin</option>
+                        <option value="Learner">Learner</option>
+                        <option value="Trainer">Trainer</option>
+                        <option value="Administrator">Administrator</option>
+                        <option value="Super Admin">Super Admin</option>
                       </select>
                     </div>
                   </div>

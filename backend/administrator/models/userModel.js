@@ -1,4 +1,4 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-module.exports = prisma.employee;
+module.exports = prisma.user;

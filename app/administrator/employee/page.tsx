@@ -23,7 +23,7 @@ interface Employee {
   jobLevel: string;
   joinDate: string;
   status: string;
-  role?: string; // tambahan role
+  role?: string;
 }
 
 export default function EmployeeList() {
@@ -112,12 +112,15 @@ export default function EmployeeList() {
   // ketika klik Eye
   const openRoleModal = (employee: Employee) => {
     setSelectedEmployee(employee);
-    setSelectedRole(employee.role || "");
+    setSelectedRole(employee.role || "Learner");
     setShowRoleModal(true);
   };
 
   const handleSaveRole = async () => {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || !selectedRole) {
+      alert("Please select a role.");
+      return;
+    }
 
     try {
       const response = await fetch(

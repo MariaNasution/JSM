@@ -8,4 +8,7 @@ router.post("/", employeeController.createEmployee);
 router.put("/:id", employeeController.updateEmployee);
 router.delete("/:id", employeeController.deleteEmployee);
 
+// Rute khusus untuk update role dari dashboard
+router.put("/:id/role", employeeController.updateRole);
+
 module.exports = router;

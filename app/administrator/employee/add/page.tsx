@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Bell, FileText } from "lucide-react";
 import Link from "next/link";
+
+interface MasterData {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
 
 interface EmployeeData {
   firstName: string;
@@ -28,7 +34,7 @@ interface EmployeeData {
   endEmploymentStatusDate: string;
   username: string;
   password: string;
-   role: string;
+  role: string;
 }
 
 export default function AddEmployee() {
@@ -56,33 +62,188 @@ export default function AddEmployee() {
     endEmploymentStatusDate: "",
     username: "",
     password: "",
-    role:"",
-    
+    role: "Learner",
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const nextStep = () => setStep((prev) => prev + 1);
-  const prevStep = () => setStep((prev) => prev - 1);
+  // 🔹 State untuk Data Master
+  const [masterData, setMasterData] = useState<{ [key: string]: MasterData[] }>(
+    {
+      branches: [],
+      divisions: [],
+      departments: [],
+      units: [],
+      jobLevels: [],
+      employeeStatuses: [],
+      employeeTypes: [],
+    }
+  );
+  const [isMasterLoading, setIsMasterLoading] = useState(true);
 
+  // 🔹 Fetch semua data master yang diperlukan
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      setIsMasterLoading(true);
+      const endpoints = {
+        branches: "api/branches",
+        divisions: "api/divisions",
+        departments: "api/departments",
+        units: "api/units",
+        jobLevels: "api/job-levels",
+        employeeStatuses: "api/employee-statuses",
+      };
+
+      const promises = Object.entries(endpoints).map(([key, endpoint]) =>
+        fetch(`http://localhost:3000/${endpoint}`).then((res) =>
+          res.json().catch(() => [])
+        )
+      );
+
+      const results = await Promise.all(promises);
+      const newMasterData: { [key: string]: MasterData[] } = {};
+      Object.keys(endpoints).forEach((key, index) => {
+        newMasterData[key] = results[index].map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          branchId: item.branchId,
+          divisionId: item.divisionId,
+          departmentId: item.departmentId,
+        }));
+      });
+      setMasterData(newMasterData);
+      setIsMasterLoading(false);
+    };
+    fetchMasterData();
+  }, []);
+
+  // 🔹 Filtering Data Master (Cascading Logic)
+  const filteredDivisions = useMemo(() => {
+    const selectedBranch = masterData.branches.find(
+      (b) => b.name === employeeData.companyName
+    );
+    if (!selectedBranch) return [];
+    return masterData.divisions.filter((d) => d.branchId === selectedBranch.id);
+  }, [employeeData.companyName, masterData.divisions, masterData.branches]);
+
+  const filteredDepartments = useMemo(() => {
+    const selectedDivision = masterData.divisions.find(
+      (d) => d.name === employeeData.division
+    );
+    if (!selectedDivision) return [];
+    return masterData.departments.filter(
+      (d) => d.divisionId === selectedDivision.id
+    );
+  }, [employeeData.division, masterData.departments, masterData.divisions]);
+
+  const filteredUnits = useMemo(() => {
+    const selectedDepartment = masterData.departments.find(
+      (d) => d.name === employeeData.department
+    );
+    if (!selectedDepartment) return [];
+    return masterData.units.filter(
+      (u) => u.departmentId === selectedDepartment.id
+    );
+  }, [employeeData.department, masterData.units, masterData.departments]);
+
+  // 🔹 Handle Change + Automatic Defaulting Logic
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setEmployeeData((prevData) => ({ ...prevData, [name]: value }));
+
+    setEmployeeData((prevData) => {
+      const newData = { ...prevData, [name]: value };
+
+      // 1. Automatic Username/Password Defaulting
+      if (name === "email") {
+        newData.username = value;
+      }
+      if (name === "phoneNumber") {
+        newData.password = value;
+      }
+
+      // 2. Clear subsequent fields when a parent selection changes
+      if (name === "companyName") {
+        newData.division = "";
+        newData.department = "";
+        newData.unit = "";
+      } else if (name === "division") {
+        newData.department = "";
+        newData.unit = "";
+      } else if (name === "department") {
+        newData.unit = "";
+      }
+
+      return newData;
+    });
   };
 
+  // 🔹 Multi-step handlers
+  const nextStep = () => {
+    if (step === 1) {
+      if (
+        !employeeData.firstName ||
+        !employeeData.lastName ||
+        !employeeData.email ||
+        !employeeData.phoneNumber ||
+        !employeeData.placeOfBirth ||
+        !employeeData.birthdate ||
+        !employeeData.gender ||
+        !employeeData.religion ||
+        !employeeData.maritalStatus ||
+        !employeeData.bloodType
+      ) {
+        alert("Harap isi semua field wajib Personal Data (*).");
+        return;
+      }
+    }
+    if (step === 2) {
+      if (
+        !employeeData.companyName ||
+        !employeeData.division ||
+        !employeeData.department ||
+        !employeeData.jobLevel ||
+        !employeeData.employeeStatus
+      ) {
+        alert("Harap isi semua field wajib Employment Data (*).");
+        return;
+      }
+    }
+    setStep((prev) => prev + 1);
+  };
+  const prevStep = () => setStep((prev) => prev - 1);
+
+  // 🔹 Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    // Final check for step 3 (Account Data)
+    if (
+      !employeeData.username ||
+      !employeeData.password ||
+      !employeeData.role
+    ) {
+      alert("Harap isi semua field Account data (*).");
+      setLoading(false);
+      setStep(3);
+      return;
+    }
+
+    // Pastikan username/password dikirim dengan nilai default jika kosong
+    const dataToSend = {
+      ...employeeData,
+      username: employeeData.username || employeeData.email,
+      password: employeeData.password || employeeData.phoneNumber,
+      status: employeeData.employeeStatus,
+    };
+
     try {
       const response = await fetch("http://localhost:3000/api/employees", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(employeeData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
       });
 
       if (response.ok) {
@@ -100,6 +261,10 @@ export default function AddEmployee() {
     }
   };
 
+  if (isMasterLoading) {
+    return <div className="p-6 text-center">Loading Master Data...</div>;
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       <div className="flex-1 p-6">
@@ -109,7 +274,10 @@ export default function AddEmployee() {
             <div className="flex items-center gap-2">
               <Users size={20} />
               <div className="flex items-center gap-2 text-sm">
-                <Link href="/administrator/employee" className="hover:underline">
+                <Link
+                  href="/administrator/employee"
+                  className="hover:underline"
+                >
                   Employee
                 </Link>
                 <span>/</span>
@@ -117,10 +285,10 @@ export default function AddEmployee() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-blue-600 rounded">
+              <button type="button" className="p-2 hover:bg-blue-600 rounded">
                 <Bell size={20} />
               </button>
-              <button className="p-2 hover:bg-blue-600 rounded">
+              <button type="button" className="p-2 hover:bg-blue-600 rounded">
                 <FileText size={20} />
               </button>
             </div>
@@ -130,48 +298,34 @@ export default function AddEmployee() {
           <div className="p-8">
             {/* Step Indicator */}
             <div className="flex items-center gap-6 mb-6">
-              <div
-                className={`flex items-center gap-2 ${
-                  step === 1 ? "text-blue-600 font-bold" : "text-gray-500"
-                }`}
-              >
-                <span className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-blue-600">
-                  1
-                </span>
-                <span>Personal Data</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 ${
-                  step === 2 ? "text-blue-600 font-bold" : "text-gray-500"
-                }`}
-              >
-                <span className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-blue-600">
-                  2
-                </span>
-                <span>Employment Data</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 ${
-                  step === 3 ? "text-blue-600 font-bold" : "text-gray-500"
-                }`}
-              >
-                <span className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-blue-600">
-                  3
-                </span>
-                <span>Account</span>
-              </div>
+              {["Personal Data", "Employment Data", "Account"].map(
+                (label, idx) => (
+                  <div
+                    key={label}
+                    className={`flex items-center gap-2 ${
+                      step === idx + 1
+                        ? "text-blue-600 font-bold"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-blue-600">
+                      {idx + 1}
+                    </span>
+                    <span>{label}</span>
+                  </div>
+                )
+              )}
             </div>
 
             <form onSubmit={handleSubmit}>
-              {/* Step 1 */}
+              {/* Step 1: Personal Data */}
               {step === 1 && (
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">Personal Data</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        First Name
-                      </label>
+                    {/* First Name */}
+                    <label>
+                      First Name (*)
                       <input
                         name="firstName"
                         value={employeeData.firstName}
@@ -179,11 +333,10 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Last Name
-                      </label>
+                    </label>
+                    {/* Last Name */}
+                    <label>
+                      Last Name (*)
                       <input
                         name="lastName"
                         value={employeeData.lastName}
@@ -191,116 +344,120 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Place of Birth
-                      </label>
+                    </label>
+                    {/* Place of Birth */}
+                    <label>
+                      Place of Birth (*)
                       <input
                         name="placeOfBirth"
                         value={employeeData.placeOfBirth}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Birthdate
-                      </label>
+                    </label>
+                    {/* Birthdate */}
+                    <label>
+                      Birthdate (*)
                       <input
                         type="date"
                         name="birthdate"
                         value={employeeData.birthdate}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gender
-                      </label>
+                    </label>
+                    {/* Gender */}
+                    <label>
+                      Gender (*)
                       <select
                         name="gender"
                         value={employeeData.gender}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
+                        <option value="">Select Gender</option>{" "}
+                        <option value="Male">Male</option>{" "}
                         <option value="Female">Female</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Religion
-                      </label>
+                    </label>
+                    {/* Religion */}
+                    <label>
+                      Religion (*)
                       <select
                         name="religion"
                         value={employeeData.religion}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
-                        <option value="">Select Religion</option>
-                        <option value="Islam">Islam</option>
-                        <option value="Christian">Christian</option>
+                        <option value="">Select Religion</option>{" "}
+                        <option value="Islam">Islam</option>{" "}
+                        <option value="Christian">Christian</option>{" "}
                         <option value="Hindu">Hindu</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Marital Status
-                      </label>
+                    </label>
+                    {/* Marital Status */}
+                    <label>
+                      Marital Status (*)
                       <select
                         name="maritalStatus"
                         value={employeeData.maritalStatus}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
-                        <option value="">Select Status</option>
-                        <option value="Single">Single</option>
+                        <option value="">Select Status</option>{" "}
+                        <option value="Single">Single</option>{" "}
                         <option value="Married">Married</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Blood Type
-                      </label>
+                    </label>
+                    {/* Blood Type */}
+                    <label>
+                      Blood Type (*)
                       <select
                         name="bloodType"
                         value={employeeData.bloodType}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
-                        <option value="">Select Blood Type</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="O">O</option>
+                        <option value="">Select Type</option>{" "}
+                        <option value="A">A</option>{" "}
+                        <option value="B">B</option>{" "}
+                        <option value="O">O</option>{" "}
                         <option value="AB">AB</option>
                       </select>
-                    </div>
+                    </label>
+                    {/* Email */}
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
+                      <label>
+                        Email (*)
+                        <input
+                          name="email"
+                          type="email"
+                          value={employeeData.email}
+                          onChange={handleChange}
+                          className="border p-2 rounded w-full"
+                          required
+                        />
                       </label>
-                      <input
-                        name="email"
-                        type="email"
-                        value={employeeData.email}
-                        onChange={handleChange}
-                        className="border p-2 rounded w-full"
-                      />
                     </div>
+                    {/* Phone Number */}
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone Number
+                      <label>
+                        Phone Number (*)
+                        <input
+                          name="phoneNumber"
+                          type="tel"
+                          value={employeeData.phoneNumber}
+                          onChange={handleChange}
+                          className="border p-2 rounded w-full"
+                          required
+                        />
                       </label>
-                      <input
-                        name="phoneNumber"
-                        type="tel"
-                        value={employeeData.phoneNumber}
-                        onChange={handleChange}
-                        className="border p-2 rounded w-full"
-                      />
                     </div>
                   </div>
                   <div className="flex justify-between mt-6">
@@ -322,153 +479,169 @@ export default function AddEmployee() {
                 </div>
               )}
 
-              {/* Step 2 */}
+              {/* Step 2: Employment Data */}
               {step === 2 && (
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">
                     Employment Data
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Company Name (Branch) */}
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company Name
-                      </label>
-                      <input
+                      <label>Company Name (*)</label>
+                      <select
                         name="companyName"
                         value={employeeData.companyName}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
-                      />
+                        required
+                      >
+                        <option value="">Select Company Branch</option>
+                        {masterData.branches.map((b) => (
+                          <option key={b.id} value={b.name}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label>
                         Employee ID
+                        <input
+                          name="employeeId"
+                          value={employeeData.employeeId}
+                          onChange={handleChange}
+                          className="border p-2 rounded w-full"
+                        />
                       </label>
-                      <input
-                        name="employeeId"
-                        value={employeeData.employeeId}
-                        onChange={handleChange}
-                        className="border p-2 rounded w-full"
-                      />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Division
-                      </label>
+
+                    {/* Division */}
+                    <label>
+                      Division (*)
                       <select
                         name="division"
                         value={employeeData.division}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
+                        disabled={!employeeData.companyName}
                       >
                         <option value="">Select Division</option>
-                        <option value="Finance">Finance</option>
-                        <option value="HR">HR</option>
-                        <option value="IT">IT</option>
+                        {filteredDivisions.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Department
-                      </label>
+                    </label>
+                    {/* Department */}
+                    <label>
+                      Department (*)
                       <select
                         name="department"
                         value={employeeData.department}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
+                        disabled={!employeeData.division}
                       >
                         <option value="">Select Department</option>
-                        <option value="Accounting">Accounting</option>
-                        <option value="Recruitment">Recruitment</option>
-                        <option value="Development">Development</option>
+                        {filteredDepartments.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Unit
-                      </label>
+                    </label>
+                    {/* Unit */}
+                    <label>
+                      Unit
                       <select
                         name="unit"
                         value={employeeData.unit}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        disabled={!employeeData.department}
                       >
                         <option value="">Select Unit</option>
-                        <option value="Unit A">Unit A</option>
-                        <option value="Unit B">Unit B</option>
-                        <option value="Unit C">Unit C</option>
+                        {filteredUnits.map((u) => (
+                          <option key={u.id} value={u.name}>
+                            {u.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Job Level
-                      </label>
+                    </label>
+                    {/* Job Level */}
+                    <label>
+                      Job Level (*)
                       <select
                         name="jobLevel"
                         value={employeeData.jobLevel}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
                         <option value="">Select Job Level</option>
-                        <option value="Staff">Staff</option>
-                        <option value="Supervisor">Supervisor</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Director">Director</option>
+                        {masterData.jobLevels.map((j) => (
+                          <option key={j.id} value={j.name}>
+                            {j.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Employee Status
-                      </label>
+                    </label>
+                    {/* Employee Status */}
+                    <label>
+                      Employee Status (*)
                       <select
                         name="employeeStatus"
                         value={employeeData.employeeStatus}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
+                        required
                       >
                         <option value="">Select Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                        <option value="On Contract">On Contract</option>
+                        {masterData.employeeStatuses.map((e) => (
+                          <option key={e.id} value={e.name}>
+                            {e.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Join Date
-                      </label>
+                    </label>
+                    {/* Join Date */}
+                    <label>
+                      Join Date
                       <input
-                        type="date"
                         name="joinDate"
+                        type="date"
                         value={employeeData.joinDate}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
                       />
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    </label>
+                    {/* Sign Date */}
+                    <label>
                       Sign Date
+                      <input
+                        name="signDate"
+                        type="date"
+                        value={employeeData.signDate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
                     </label>
-                    <input
-                      type="date"
-                      name="signDate"
-                      value={employeeData.signDate}
-                      onChange={handleChange}
-                      className="border p-2 rounded w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {/* End Employment Status Date */}
+                    <label>
                       End Employment Status Date
+                      <input
+                        name="endEmploymentStatusDate"
+                        type="date"
+                        value={employeeData.endEmploymentStatusDate}
+                        onChange={handleChange}
+                        className="border p-2 rounded w-full"
+                      />
                     </label>
-                    <input
-                      type="date"
-                      name="endEmploymentStatusDate"
-                      value={employeeData.endEmploymentStatusDate}
-                      onChange={handleChange}
-                      className="border p-2 rounded w-full"
-                    />
-                  </div>
-
                   </div>
                   <div className="flex justify-between mt-6">
                     <button
@@ -489,13 +662,14 @@ export default function AddEmployee() {
                 </div>
               )}
 
-              {/* Step 3 */}
+              {/* Step 3: Account Data */}
               {step === 3 && (
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-lg font-semibold mb-4">Account</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <label className="col-span-2">
-                      Username
+                    {/* Username */}
+                    <div className="col-span-2">
+                      <label>Username (*)</label>
                       <input
                         type="text"
                         name="username"
@@ -504,20 +678,28 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </label>
-                    <label className="col-span-2">
-                      Password
+                      <p className="text-xs text-gray-500 mt-1">
+                        Default: Menggunakan Email
+                      </p>
+                    </div>
+                    {/* Password */}
+                    <div className="col-span-2">
+                      <label>Password (*)</label>
                       <input
-                        type="password"
+                        type="text"
                         name="password"
                         value={employeeData.password}
                         onChange={handleChange}
                         className="border p-2 rounded w-full"
                         required
                       />
-                    </label>
-                    <label className="col-span-2">
-                      Role
+                      <p className="text-xs text-gray-500 mt-1">
+                        Default: Menggunakan Phone Number
+                      </p>
+                    </div>
+                    {/* Role */}
+                    <div className="col-span-2">
+                      <label>Role (*)</label>
                       <select
                         name="role"
                         value={employeeData.role}
@@ -525,14 +707,12 @@ export default function AddEmployee() {
                         className="border p-2 rounded w-full"
                         required
                       >
-                        <option value="">Select Role</option>
-                        <option value="Admin">Learner</option>
-                        <option value="Manager">Trainer</option>
-                        <option value="Employee">Administrator</option>
-                        <option value="Employee">Super Admin</option>
-                        
+                        <option value="Learner">Learner</option>
+                        <option value="Trainer">Trainer</option>
+                        <option value="Administrator">Administrator</option>
+                        <option value="Super Admin">Super Admin</option>
                       </select>
-                    </label>
+                    </div>
                   </div>
                   <div className="flex justify-between mt-6">
                     <button

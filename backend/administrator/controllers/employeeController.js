@@ -252,10 +252,10 @@ const employeeController = {
     }
   },
 
-  // 🔹 FUNGSI UNTUK EXPORT CSV (MEMASTIKAN SEMUA FIELD TERAMBIL)
+  // EXPORT TO CSV
   exportEmployeesToCsv: async (req, res) => {
     try {
-      // Menggunakan 'select' eksplisit untuk mendapatkan semua kolom yang diinginkan
+      // Ambil data dengan select eksplisit agar semua field terambil (termasuk yang nullable)
       const employees = await employeeModel.findMany({
         select: {
           id: true,
@@ -290,6 +290,10 @@ const employeeController = {
         return res.status(404).send("No employee data found to export.");
       }
 
+      // 🔹 FIX: Hapus anotasi TypeScript dari fungsi formatDate
+      const formatDate = (date) =>
+        date ? new Date(date).toLocaleDateString("en-US") : "";
+
       // Definisikan Header CSV LENGKAP
       const csvHeader = [
         "ID",
@@ -316,9 +320,6 @@ const employeeController = {
         "Username",
         "Role",
       ].join(",");
-
-      const formatDate = (date: Date | null | undefined) =>
-        date ? new Date(date).toLocaleDateString("en-US") : "";
 
       const csvRows = employees.map((emp) => {
         return [

@@ -29,7 +29,7 @@ export default function DivisionPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<Division | null>(null);
   const [formName, setFormName] = useState("");
-  const [formBranchId, setFormBranchId] = useState<number | "">("");
+  const [formBranchId, setFormBranchId] = useState<number | "">(""); // 🔹 FIX: Tipe data diperbaiki
   const [formStatus, setFormStatus] = useState<"Active" | "Inactive">("Active");
 
   const API_URL = "http://localhost:3000/api/divisions";
@@ -111,18 +111,19 @@ export default function DivisionPage() {
     }
   };
 
-  // 🔹 Delete Data (DELETE)
+  // 🔹 FIX: Delete Data (DELETE)
   const handleDelete = async (id: number) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus Division ini?"))
       return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (response.ok) {
+      if (response.status === 204) {
         alert("Division berhasil dihapus!");
         fetchDivisions();
       } else {
         const errorData = await response.json();
+        // Menampilkan pesan error spesifik dari backend (terutama P2003)
         alert(`Gagal menghapus division: ${errorData.error}`);
       }
     } catch (error) {

@@ -32,6 +32,11 @@ const departmentController = {
       });
       res.status(201).json(newDepartment);
     } catch (err) {
+      if (err.code === "P2002") {
+        return res
+          .status(400)
+          .json({ error: "Department name already exists in this Division." });
+      }
       res.status(400).json({ error: "Failed to create department." });
     }
   },
@@ -52,6 +57,31 @@ const departmentController = {
       res.json(updatedDepartment);
     } catch (err) {
       res.status(400).json({ error: "Failed to update department." });
+    }
+  },
+
+  // 🔹 FIX: DELETE Department Controller (Menangani Foreign Key Constraint)
+  delete: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await departmentModel.delete({ where: { id } });
+
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting department:", err);
+      // Pengecekan error spesifik Foreign Key (P2003)
+      if (err.code === "P2003") {
+        return res.status(400).json({
+          error:
+            "P2003: Department ini masih memiliki relasi aktif (Unit atau Employee). Harap hapus data Unit/Employee terkait terlebih dahulu.",
+        });
+      }
+      if (err.code === "P2025") {
+        return res.status(404).json({ error: "Department tidak ditemukan." });
+      }
+      res.status(500).json({
+        error: "Gagal menghapus data department karena kesalahan database.",
+      });
     }
   },
 };

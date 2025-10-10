@@ -46,6 +46,33 @@ const branchController = {
       res.status(400).json({ error: "Failed to update branch." });
     }
   },
+
+  // 🔹 DELETE Controller (Mencakup penanganan FK P2003)
+  delete: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await branchModel.delete({ where: { id } });
+
+      // Respon sukses 204 (No Content)
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting branch:", err);
+      // Pengecekan error spesifik Foreign Key (P2003)
+      if (err.code === "P2003") {
+        return res.status(400).json({
+          error:
+            "P2003: Branch ini masih memiliki relasi aktif (Division, Department, atau Unit). Harap hapus relasi tersebut terlebih dahulu.",
+        });
+      }
+      // Pengecekan jika ID tidak ditemukan
+      if (err.code === "P2025") {
+        return res.status(404).json({ error: "Branch tidak ditemukan." });
+      }
+      res.status(500).json({
+        error: "Gagal menghapus data branch karena kesalahan server.",
+      });
+    }
+  },
 };
 
 module.exports = branchController;

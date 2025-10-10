@@ -33,6 +33,11 @@ const unitController = {
       });
       res.status(201).json(newUnit);
     } catch (err) {
+      if (err.code === "P2002") {
+        return res
+          .status(400)
+          .json({ error: "Unit name already exists in this Department." });
+      }
       res.status(400).json({ error: "Failed to create unit." });
     }
   },
@@ -54,6 +59,31 @@ const unitController = {
       res.json(updatedUnit);
     } catch (err) {
       res.status(400).json({ error: "Failed to update unit." });
+    }
+  },
+
+  // 🔹 FIX: DELETE Unit Controller (Menangani Foreign Key Constraint)
+  delete: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await unitModel.delete({ where: { id } });
+
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting unit:", err);
+      // Pengecekan error spesifik Foreign Key (P2003) - Jika Unit terhubung ke Employee
+      if (err.code === "P2003") {
+        return res.status(400).json({
+          error:
+            "P2003: Unit ini masih memiliki Employee yang terhubung. Harap hapus Employee tersebut terlebih dahulu.",
+        });
+      }
+      if (err.code === "P2025") {
+        return res.status(404).json({ error: "Unit tidak ditemukan." });
+      }
+      res.status(500).json({
+        error: "Gagal menghapus data unit karena kesalahan database.",
+      });
     }
   },
 };

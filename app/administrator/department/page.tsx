@@ -126,18 +126,19 @@ export default function DepartmentPage() {
     }
   };
 
-  // 🔹 Delete Data (DELETE)
+  // 🔹 FIX: Delete Data (DELETE)
   const handleDelete = async (id: number) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus Department ini?"))
       return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (response.ok) {
+      if (response.status === 204) {
         alert("Department berhasil dihapus!");
         fetchDepartments();
       } else {
         const errorData = await response.json();
+        // Menampilkan pesan error spesifik dari backend (terutama P2003)
         alert(`Gagal menghapus department: ${errorData.error}`);
       }
     } catch (error) {

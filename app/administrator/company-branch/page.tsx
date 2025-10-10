@@ -30,7 +30,6 @@ export default function CompanyBranchPage() {
       const response = await fetch(API_URL);
       if (response.ok) {
         const data = await response.json();
-        // Konversi tipe data dari backend (status String) ke frontend (status | Inactive)
         setBranches(
           data.map((b: any) => ({
             ...b,
@@ -82,17 +81,29 @@ export default function CompanyBranchPage() {
 
   // 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Branch ini?"))
+    if (
+      !window.confirm(
+        "Apakah Anda yakin ingin menghapus Branch ini? Menghapus branch dapat memutus relasi dengan Division, Department, dan Unit."
+      )
+    )
       return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (response.ok) {
+
+      if (response.status === 204) {
         alert("Branch berhasil dihapus!");
         fetchBranches();
       } else {
         const errorData = await response.json();
-        alert(`Gagal menghapus branch: ${errorData.error}`);
+        // P2003 adalah kode error Prisma untuk Foreign Key constraint violation
+        if (errorData.error && errorData.error.includes("P2003")) {
+          alert(
+            "Gagal menghapus! Branch ini masih memiliki relasi aktif (Division, Department, atau Unit). Harap hapus relasi tersebut terlebih dahulu."
+          );
+        } else {
+          alert(`Gagal menghapus branch: ${errorData.error}`);
+        }
       }
     } catch (error) {
       alert("Terjadi kesalahan saat menghapus data.");

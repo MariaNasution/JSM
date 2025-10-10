@@ -48,6 +48,31 @@ const divisionController = {
       res.status(400).json({ error: "Failed to update division." });
     }
   },
+
+  // 🔹 FUNGSI DELETE Division (FIXED: Menangani Foreign Key Constraint)
+  delete: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await divisionModel.delete({ where: { id } });
+
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting division:", err);
+      // Pengecekan error spesifik Foreign Key (P2003)
+      if (err.code === "P2003") {
+        return res.status(400).json({
+          error:
+            "P2003: Division ini masih memiliki relasi aktif (Department atau Unit). Harap hapus relasi tersebut terlebih dahulu.",
+        });
+      }
+      if (err.code === "P2025") {
+        return res.status(404).json({ error: "Division tidak ditemukan." });
+      }
+      res.status(500).json({
+        error: "Gagal menghapus data division karena kesalahan database.",
+      });
+    }
+  },
 };
 
 module.exports = divisionController;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
 
 interface Branch {
@@ -142,17 +142,18 @@ export default function UnitPage() {
     }
   };
 
-  // 🔹 Delete Data (DELETE)
+  // 🔹 FIX: Delete Data (DELETE)
   const handleDelete = async (id: number) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus Unit ini?")) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (response.ok) {
+      if (response.status === 204) {
         alert("Unit berhasil dihapus!");
         fetchUnits();
       } else {
         const errorData = await response.json();
+        // Menampilkan pesan error spesifik dari backend (error handling ada di Controller)
         alert(`Gagal menghapus unit: ${errorData.error}`);
       }
     } catch (error) {

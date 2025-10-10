@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
+
 
 interface Branch {
   id: number;
@@ -51,10 +53,32 @@ export default function CompanyBranchPage() {
   // 🔹 Save Data (CREATE/UPDATE)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formName || !formStatus) {
-      alert("Nama dan Status wajib diisi.");
+      Swal.fire({
+        title: "Warning!",
+        text: "Name and Status are required.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b",
+      });
       return;
     }
+
+    // Konfirmasi sebelum simpan
+    const confirmResult = await Swal.fire({
+      title: editingBranch ? "Update Branch?" : "Add New Branch?",
+      text: editingBranch
+        ? "Are you sure you want to update this branch?"
+        : "Are you sure you want to add this new branch?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: editingBranch ? "Yes, update it!" : "Yes, add it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     const method = editingBranch ? "PUT" : "POST";
     const url = editingBranch ? `${API_URL}/${editingBranch.id}` : API_URL;
@@ -67,48 +91,88 @@ export default function CompanyBranchPage() {
       });
 
       if (response.ok) {
-        alert(`Branch berhasil di${editingBranch ? "update" : "tambah"}!`);
-        fetchBranches(); // Refresh data
+        await Swal.fire({
+          title: "Success!",
+          text: `Branch succesfully ${editingBranch ? "updated" : "added"}!`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+        fetchBranches();
         setModalOpen(false);
       } else {
         const errorData = await response.json();
-        alert(`Gagal menyimpan branch: ${errorData.error}`);
+        Swal.fire({
+          title: "Error!",
+          text: `Failed to save branch: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      Swal.fire({
+        title: "Error!",
+        text: "An error occurred while communicating with the server.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
+
   // 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (
-      !window.confirm(
-        "Apakah Anda yakin ingin menghapus Branch ini? Menghapus branch dapat memutus relasi dengan Division, Department, dan Unit."
-      )
-    )
-      return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure?",
+      text: "Deleting a branch may break relations with Division, Department, and Unit.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
 
       if (response.status === 204) {
-        alert("Branch berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Branch has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchBranches();
       } else {
         const errorData = await response.json();
-        // P2003 adalah kode error Prisma untuk Foreign Key constraint violation
         if (errorData.error && errorData.error.includes("P2003")) {
-          alert(
-            "Gagal menghapus! Branch ini masih memiliki relasi aktif (Division, Department, atau Unit). Harap hapus relasi tersebut terlebih dahulu."
-          );
+          await Swal.fire({
+            title: "Cannot Delete!",
+            text: "This branch still has active relations (Division, Department, or Unit). Delete those relations first.",
+            icon: "warning",
+            confirmButtonColor: "#f59e0b",
+          });
         } else {
-          alert(`Gagal menghapus branch: ${errorData.error}`);
+          await Swal.fire({
+            title: "Error!",
+            text: `Failed to delete branch: ${errorData.error}`,
+            icon: "error",
+            confirmButtonColor: "#d33",
+          });
         }
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
+
 
   // Modal handlers
   const openAddModal = () => {

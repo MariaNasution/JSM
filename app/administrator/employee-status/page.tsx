@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface EmployeeStatus {
   id: number;
@@ -50,57 +51,117 @@ export default function EmployeeStatusPage() {
     fetchStatuses();
   }, []);
 
-  // 🔹 Save Data (CREATE/UPDATE)
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName || !formStatus) {
-      alert("Nama dan Status wajib diisi.");
-      return;
-    }
+// 🔹 Save Data (CREATE/UPDATE)
+// 🔹 Save Data (CREATE/UPDATE)
+const handleSave = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const method = editingStatus ? "PUT" : "POST";
-    const url = editingStatus ? `${API_URL}/${editingStatus.id}` : API_URL;
+  // Input validation
+  if (!formName || !formStatus) {
+    await Swal.fire({
+      title: "Warning!",
+      text: "Name and Status are required.",
+      icon: "warning",
+      confirmButtonColor: "#f59e0b",
+    });
+    return;
+  }
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formName, status: formStatus }),
+  // Confirmation before save
+  const confirmResult = await Swal.fire({
+    title: editingStatus ? "Update Employee Status?" : "Add New Employee Status?",
+    text: editingStatus
+      ? "Are you sure you want to update this Employee Status?"
+      : "Are you sure you want to add a new Employee Status?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: editingStatus ? "Yes, update!" : "Yes, add!",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  const method = editingStatus ? "PUT" : "POST";
+  const url = editingStatus ? `${API_URL}/${editingStatus.id}` : API_URL;
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: formName, status: formStatus }),
+    });
+
+    if (response.ok) {
+      await Swal.fire({
+        title: "Success!",
+        text: `Employee Status successfully ${editingStatus ? "updated" : "added"}!`,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
       });
-
-      if (response.ok) {
-        alert(
-          `Employee Status berhasil di${editingStatus ? "update" : "tambah"}!`
-        );
-        fetchStatuses();
-        setModalOpen(false);
-      } else {
-        const errorData = await response.json();
-        alert(`Gagal menyimpan Employee Status: ${errorData.error}`);
-      }
-    } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      fetchStatuses();
+      setModalOpen(false);
+    } else {
+      const errorData = await response.json();
+      await Swal.fire({
+        title: "Error!",
+        text: `Failed to save Employee Status: ${errorData.error}`,
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
-  };
+  } catch (error) {
+    await Swal.fire({
+      title: "Error!",
+      text: "An error occurred while communicating with the server.",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  }
+};
 
-  // 🔹 Delete Data (DELETE)
+// 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (
-      !window.confirm("Apakah Anda yakin ingin menghapus Employee Status ini?")
-    )
-      return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure you want to delete this Employee Status?",
+      text: "Deleted data cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (response.ok) {
-        alert("Employee Status berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Employee Status has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchStatuses();
       } else {
         const errorData = await response.json();
-        alert(`Gagal menghapus Employee Status: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to delete Employee Status: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 

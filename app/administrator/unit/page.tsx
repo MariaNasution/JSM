@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface Branch {
   id: number;
@@ -102,6 +103,8 @@ export default function UnitPage() {
   // 🔹 Save Data (CREATE/UPDATE)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Input validation
     if (
       !formName ||
       !formStatus ||
@@ -109,9 +112,30 @@ export default function UnitPage() {
       formDivisionId === "" ||
       formDepartmentId === ""
     ) {
-      alert("Semua field wajib diisi.");
+      await Swal.fire({
+        title: "Warning!",
+        text: "All fields are required.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b",
+      });
       return;
     }
+
+    // Confirmation before save
+    const confirmResult = await Swal.fire({
+      title: editingUnit ? "Update Unit?" : "Add New Unit?",
+      text: editingUnit
+        ? "Are you sure you want to update this unit?"
+        : "Are you sure you want to add a new unit?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: editingUnit ? "Yes, update!" : "Yes, add!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     const method = editingUnit ? "PUT" : "POST";
     const url = editingUnit ? `${API_URL}/${editingUnit.id}` : API_URL;
@@ -130,36 +154,77 @@ export default function UnitPage() {
       });
 
       if (response.ok) {
-        alert(`Unit berhasil di${editingUnit ? "update" : "tambah"}!`);
+        await Swal.fire({
+          title: "Success!",
+          text: `Unit successfully ${editingUnit ? "updated" : "added"}!`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchUnits();
         setModalOpen(false);
       } else {
         const errorData = await response.json();
-        alert(`Gagal menyimpan unit: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to save unit: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while communicating with the server.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
-  // 🔹 FIX: Delete Data (DELETE)
+  // 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Unit ini?")) return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure you want to delete this Unit?",
+      text: "Deleted data cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (response.status === 204) {
-        alert("Unit berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Unit has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchUnits();
       } else {
         const errorData = await response.json();
-        // Menampilkan pesan error spesifik dari backend (error handling ada di Controller)
-        alert(`Gagal menghapus unit: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to delete unit: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
+
 
   // Filtered lists for MODAL
   const modalDivisions = divisions.filter(

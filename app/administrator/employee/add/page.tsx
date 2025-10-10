@@ -241,6 +241,17 @@ export default function AddEmployee() {
     };
 
     try {
+        const confirmResult = await Swal.fire({
+        title: "Add New Employee?",
+        text: "Are you sure you want to add new employee data?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, add it!",
+        cancelButtonText: "Cancel",
+      });
+      if (!confirmResult.isConfirmed) return; 
       const response = await fetch("http://localhost:3000/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface Branch {
   id: number;
@@ -77,60 +78,121 @@ export default function DivisionPage() {
   }, []);
 
   // 🔹 Save Data (CREATE/UPDATE)
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName || !formStatus || formBranchId === "") {
-      alert("Semua field wajib diisi.");
-      return;
-    }
+const handleSave = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const method = editingDivision ? "PUT" : "POST";
-    const url = editingDivision ? `${API_URL}/${editingDivision.id}` : API_URL;
+  // Input validation
+  if (!formName || !formStatus || formBranchId === "") {
+    await Swal.fire({
+      title: "Warning!",
+      text: "All fields are required.",
+      icon: "warning",
+      confirmButtonColor: "#f59e0b",
+    });
+    return;
+  }
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formName,
-          status: formStatus,
-          branchId: formBranchId,
-        }),
+  // Confirmation before save
+  const confirmResult = await Swal.fire({
+    title: editingDivision ? "Update Division?" : "Add New Division?",
+    text: editingDivision
+      ? "Are you sure you want to update this division?"
+      : "Are you sure you want to add a new division?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: editingDivision ? "Yes, update!" : "Yes, add!",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  const method = editingDivision ? "PUT" : "POST";
+  const url = editingDivision ? `${API_URL}/${editingDivision.id}` : API_URL;
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formName,
+        status: formStatus,
+        branchId: formBranchId,
+      }),
+    });
+
+    if (response.ok) {
+      await Swal.fire({
+        title: "Success!",
+        text: `Division successfully ${editingDivision ? "updated" : "added"}!`,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
       });
-
-      if (response.ok) {
-        alert(`Division berhasil di${editingDivision ? "update" : "tambah"}!`);
-        fetchDivisions();
-        setModalOpen(false);
-      } else {
-        const errorData = await response.json();
-        alert(`Gagal menyimpan division: ${errorData.error}`);
-      }
-    } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      fetchDivisions();
+      setModalOpen(false);
+    } else {
+      const errorData = await response.json();
+      await Swal.fire({
+        title: "Error!",
+        text: `Failed to save division: ${errorData.error}`,
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
-  };
+  } catch (error) {
+    await Swal.fire({
+      title: "Error!",
+      text: "An error occurred while communicating with the server.",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  }
+};
 
-  // 🔹 FIX: Delete Data (DELETE)
+// 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Division ini?"))
-      return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure you want to delete this Division?",
+      text: "Deleted data cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (response.status === 204) {
-        alert("Division berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Division has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchDivisions();
       } else {
         const errorData = await response.json();
-        // Menampilkan pesan error spesifik dari backend (terutama P2003)
-        alert(`Gagal menghapus division: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to delete division: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
-
   // Modal handlers
   const openAddModal = () => {
     setEditingDivision(null);

@@ -239,6 +239,17 @@ export default function EditEmployeePage() {
     }
 
     try {
+        const confirmResult = await Swal.fire({
+        title: "Update Employee?",
+        text: "Are you sure you want to update the Employee data?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, update it!",
+        cancelButtonText: "Cancel",
+      });
+      if (!confirmResult.isConfirmed) return; 
       const response = await fetch(`http://localhost:3000/api/employees/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface JobLevel {
   id: number;
@@ -51,10 +52,33 @@ export default function JobLevelPage() {
   // 🔹 Save Data (CREATE/UPDATE)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Input validation
     if (!formName || !formStatus) {
-      alert("Nama dan Status wajib diisi.");
+      await Swal.fire({
+        title: "Warning!",
+        text: "Name and Status are required.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b",
+      });
       return;
     }
+
+    // Confirmation before save
+    const confirmResult = await Swal.fire({
+      title: editingLevel ? "Update Job Level?" : "Add New Job Level?",
+      text: editingLevel
+        ? "Are you sure you want to update this Job Level?"
+        : "Are you sure you want to add a new Job Level?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: editingLevel ? "Yes, update!" : "Yes, add!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     const method = editingLevel ? "PUT" : "POST";
     const url = editingLevel ? `${API_URL}/${editingLevel.id}` : API_URL;
@@ -67,37 +91,76 @@ export default function JobLevelPage() {
       });
 
       if (response.ok) {
-        alert(`Job Level berhasil di${editingLevel ? "update" : "tambah"}!`);
+        await Swal.fire({
+          title: "Success!",
+          text: `Job Level successfully ${editingLevel ? "updated" : "added"}!`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchLevels();
         setModalOpen(false);
       } else {
         const errorData = await response.json();
-        alert(`Gagal menyimpan Job Level: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to save Job Level: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while communicating with the server.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
   // 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Job Level ini?"))
-      return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure you want to delete this Job Level?",
+      text: "Deleted data cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (response.ok) {
-        alert("Job Level berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Job Level has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchLevels();
       } else {
         const errorData = await response.json();
-        alert(`Gagal menghapus Job Level: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to delete Job Level: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
-
   // Filter logic
   const filteredLevels = levels.filter((l) => {
     const matchesName = l.name.toLowerCase().includes(filterName.toLowerCase());

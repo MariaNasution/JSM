@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface EmployeeType {
   id: number;
@@ -51,10 +52,33 @@ export default function EmployeeTypePage() {
   // 🔹 Save Data (CREATE/UPDATE)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Input validation
     if (!formName || !formStatus) {
-      alert("Nama dan Status wajib diisi.");
+      await Swal.fire({
+        title: "Warning!",
+        text: "Name and Status are required.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b",
+      });
       return;
     }
+
+    // Confirmation before save
+    const confirmResult = await Swal.fire({
+      title: editingType ? "Update Employee Type?" : "Add New Employee Type?",
+      text: editingType
+        ? "Are you sure you want to update this Employee Type?"
+        : "Are you sure you want to add a new Employee Type?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: editingType ? "Yes, update!" : "Yes, add!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     const method = editingType ? "PUT" : "POST";
     const url = editingType ? `${API_URL}/${editingType.id}` : API_URL;
@@ -67,36 +91,77 @@ export default function EmployeeTypePage() {
       });
 
       if (response.ok) {
-        alert(`Employee Type berhasil di${editingType ? "update" : "tambah"}!`);
+        await Swal.fire({
+          title: "Success!",
+          text: `Employee Type successfully ${editingType ? "updated" : "added"}!`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchTypes();
         setModalOpen(false);
       } else {
         const errorData = await response.json();
-        alert(`Gagal menyimpan Employee Type: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to save Employee Type: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat berkomunikasi dengan server.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while communicating with the server.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
   // 🔹 Delete Data (DELETE)
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus Employee Type ini?"))
-      return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure you want to delete this Employee Type?",
+      text: "Deleted data cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (response.ok) {
-        alert("Employee Type berhasil dihapus!");
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Employee Type has been successfully deleted!",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         fetchTypes();
       } else {
         const errorData = await response.json();
-        alert(`Gagal menghapus Employee Type: ${errorData.error}`);
+        await Swal.fire({
+          title: "Error!",
+          text: `Failed to delete Employee Type: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat menghapus data.");
+      await Swal.fire({
+        title: "Error!",
+        text: "An error occurred while deleting the data.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     }
   };
+
 
   // Filter logic
   const filteredTypes = types.filter((t) => {

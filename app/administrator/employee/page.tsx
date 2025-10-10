@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
+
 
 interface Employee {
   id: number;
@@ -76,22 +78,34 @@ export default function EmployeeList() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this employee?")) {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Once deleted, you will not be able to recover this employee data!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/employees/${id}`,
+        const response = await fetch(`http://localhost:3000/api/employees/${id}`, 
           {
-            method: "DELETE",
-          }
-        );
+          method: "DELETE",
+        }
+      );
+
         if (response.ok) {
-          fetchEmployees(); // Refresh
+          await Swal.fire("Deleted!", "Employee has been deleted.", "success");
+          fetchEmployees();
         } else {
-          alert("Failed to delete employee.");
+          Swal.fire("Error", "Failed to delete employee.", "error");
         }
       } catch (error) {
         console.error("Error deleting employee:", error);
-        alert("Error deleting employee.");
+        Swal.fire("Error", "Something went wrong.", "error");
       }
     }
   };

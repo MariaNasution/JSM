@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Bell, FileText } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 interface MasterData {
   id: number;
@@ -247,15 +248,32 @@ export default function AddEmployee() {
       });
 
       if (response.ok) {
-        alert("Employee added successfully!");
+        await Swal.fire({
+          title: "Success!",
+          text: "Employee added successfully.",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+          confirmButtonText: "OK",
+        });
+
         router.push("/administrator/employee");
       } else {
         const errorData = await response.json();
-        alert(`Error adding employee: ${errorData.error}`);
+        Swal.fire({
+          title: "Error",
+          text: `Error adding employee: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
       console.error("Error adding employee:", error);
-      alert("Error adding employee.");
+      Swal.fire({
+        title: "Error",
+        text: "Something went wrong while adding employee.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     } finally {
       setLoading(false);
     }

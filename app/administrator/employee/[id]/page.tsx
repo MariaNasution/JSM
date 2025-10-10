@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo } from "react";
 import { Users, Bell, FileText } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 interface MasterData {
   id: number;
@@ -238,25 +239,39 @@ export default function EditEmployeePage() {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/employees/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(dataToSend),
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/employees/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
+      });
 
       if (response.ok) {
-        alert("Employee updated successfully!");
+        await Swal.fire({
+          title: "Success!",
+          text: "Employee updated successfully.",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+          confirmButtonText: "OK",
+        });
+
         router.push("/administrator/employee");
       } else {
         const errorData = await response.json();
-        alert(`Failed to update employee: ${errorData.error}`);
+        Swal.fire({
+          title: "Error",
+          text: `Failed to update employee: ${errorData.error}`,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (error) {
       console.error("Error updating employee:", error);
-      alert("Error updating employee.");
+      Swal.fire({
+        title: "Error",
+        text: "Something went wrong while updating employee.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
     } finally {
       setLoading(false);
     }
